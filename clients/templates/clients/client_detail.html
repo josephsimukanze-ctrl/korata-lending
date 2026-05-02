@@ -1,0 +1,592 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ client.full_name }} - Client Details{% endblock %}
+
+{% block content %}
+<div x-data="clientDetail()" x-init="init()" class="fade-in">
+    <div class="mb-6">
+        <a href="{% url 'clients:client_list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Clients
+        </a>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Profile Card -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden sticky top-20">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-32"></div>
+                <div class="relative px-6 pb-6">
+                    <div class="flex justify-center -mt-12 mb-4">
+                        {% if client.client_photo %}
+                            <img src="{{ client.client_photo.url }}" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover" alt="{{ client.full_name }}">
+                        {% else %}
+                            <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white text-3xl font-bold"
+                                 style="background: linear-gradient(135deg, #667eea, #764ba2)">
+                                {{ client.initials }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ client.full_name }}</h2>
+                        <div class="mt-1 flex items-center justify-center space-x-2">
+                            <p class="text-gray-600 dark:text-gray-400 font-mono text-sm">{{ client.client_id }}</p>
+                            <button @click="copyClientId" class="text-gray-400 hover:text-blue-500 transition" title="Copy Client ID">
+                                <i class="fas fa-copy text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2 flex justify-center space-x-2 flex-wrap gap-2">
+                            <span class="px-3 py-1 text-sm rounded-full {{ client.status|yesno:'bg-green-100 text-green-700,bg-gray-100 text-gray-700' }}">
+                                <i class="fas {{ client.status|yesno:'fa-check-circle,fa-circle' }} mr-1 text-xs"></i>
+                                {{ client.get_status_display }}
+                            </span>
+                            <span class="px-3 py-1 text-sm rounded-full 
+                                {% if client.risk_rating == 'low' %}bg-green-100 text-green-700
+                                {% elif client.risk_rating == 'medium' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                <i class="fas 
+                                    {% if client.risk_rating == 'low' %}fa-shield-alt
+                                    {% elif client.risk_rating == 'medium' %}fa-exclamation-triangle
+                                    {% else %}fa-skull-crossbones{% endif %} mr-1 text-xs"></i>
+                                {{ client.get_risk_rating_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="mt-6 grid grid-cols-2 gap-3">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                {{ total_loans|default:"0" }}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Total Loans</div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold text-green-600 dark:text-green-400">
+                                ZMW {{ total_borrowed|default:"0"|floatformat:0 }}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Total Borrowed</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 space-y-3">
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-id-card w-5 text-blue-500"></i>
+                            <span class="ml-3">NRC: {{ client.nrc }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-phone w-5 text-green-500"></i>
+                            <span class="ml-3">{{ client.phone_number }}</span>
+                        </div>
+                        {% if client.email %}
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-envelope w-5 text-red-500"></i>
+                            <span class="ml-3">{{ client.email }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-map-marker-alt w-5 text-purple-500"></i>
+                            <span class="ml-3">{{ client.city }}, {{ client.province }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-briefcase w-5 text-yellow-500"></i>
+                            <span class="ml-3">{{ client.get_employment_status_display }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-money-bill-wave w-5 text-green-500"></i>
+                            <span class="ml-3">ZMW {{ client.monthly_income|floatformat:2 }}/month</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400">
+                            <i class="fas fa-calendar-alt w-5 text-gray-500"></i>
+                            <span class="ml-3">Member since: {{ client.created_at|date:"M d, Y" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex space-x-2">
+                        <a href="{% url 'clients:client_edit' client.id %}" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-center hover:bg-blue-700 transition">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <button @click="confirmDelete" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-center hover:bg-red-700 transition">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Details Tabs -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+                <div class="border-b dark:border-gray-700">
+                    <div class="flex overflow-x-auto hide-scrollbar">
+                        <button @click="activeTab = 'info'" :class="activeTab === 'info' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-info-circle mr-2"></i>Information
+                        </button>
+                        <button @click="activeTab = 'guarantor'" :class="activeTab === 'guarantor' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-handshake mr-2"></i>Guarantor
+                            {% if guarantor %}<span class="ml-1 px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">1</span>{% endif %}
+                        </button>
+                        <button @click="activeTab = 'assets'" :class="activeTab === 'assets' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-gem mr-2"></i>Assets
+                            {% if assets %}<span class="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">{{ assets|length }}</span>{% endif %}
+                        </button>
+                        <button @click="activeTab = 'loans'" :class="activeTab === 'loans' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i>Loans
+                            {% if loans %}<span class="ml-1 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">{{ loans|length }}</span>{% endif %}
+                        </button>
+                        <button @click="activeTab = 'documents'" :class="activeTab === 'documents' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-file-alt mr-2"></i>Documents
+                        </button>
+                        <button @click="activeTab = 'notes'" :class="activeTab === 'notes' ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-sticky-note mr-2"></i>Notes
+                            {% if notes %}<span class="ml-1 px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">{{ notes|length }}</span>{% endif %}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <!-- Information Tab -->
+                    <div x-show="activeTab === 'info'" x-cloak>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-medium">{{ client.first_name }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Last Name</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-medium">{{ client.last_name }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Middle Name</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.middle_name|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Date of Birth</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.date_of_birth|date:"F d, Y"|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.get_gender_display|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Alternate Phone</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.alternate_phone|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Email</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.email|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Postal Code</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.postal_code|default:"—" }}</p>
+                            </div>
+                            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Physical Address</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.physical_address }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">City</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.city }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">District</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.district|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Province</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.province|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Country</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.country|default:"Zambia" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Employer</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.employer|default:"—" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Job Title</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ client.job_title|default:"—" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Guarantor Tab -->
+                    <div x-show="activeTab === 'guarantor'" x-cloak>
+                        {% if guarantor %}
+                        <div class="space-y-6">
+                            <div class="flex items-center space-x-4 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl">
+                                {% if guarantor.client_photo %}
+                                    <img src="{{ guarantor.client_photo.url }}" class="w-16 h-16 rounded-full object-cover border-2 border-white shadow">
+                                {% else %}
+                                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl font-bold shadow">
+                                        {{ guarantor.initials }}
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-800 dark:text-white">{{ guarantor.full_name }}</h3>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                            {{ guarantor.relationship|title }}
+                                        </span>
+                                        <span class="text-sm text-gray-500">{{ guarantor.relationship_years }} years</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border-b dark:border-gray-700 pb-2">
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">NRC Number</label>
+                                    <p class="mt-1 text-gray-800 dark:text-white font-mono">{{ guarantor.nrc }}</p>
+                                </div>
+                                <div class="border-b dark:border-gray-700 pb-2">
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</label>
+                                    <p class="mt-1 text-gray-800 dark:text-white">{{ guarantor.phone_number }}</p>
+                                </div>
+                                <div class="border-b dark:border-gray-700 pb-2">
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Employer</label>
+                                    <p class="mt-1 text-gray-800 dark:text-white">{{ guarantor.employer|default:"—" }}</p>
+                                </div>
+                                <div class="border-b dark:border-gray-700 pb-2">
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Income</label>
+                                    <p class="mt-1 text-gray-800 dark:text-white font-semibold text-green-600 dark:text-green-400">ZMW {{ guarantor.monthly_income|floatformat:2 }}</p>
+                                </div>
+                                <div class="md:col-span-2 border-b dark:border-gray-700 pb-2">
+                                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Physical Address</label>
+                                    <p class="mt-1 text-gray-800 dark:text-white">{{ guarantor.physical_address }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-user-friends text-4xl text-gray-400"></i>
+                            </div>
+                            <p class="text-gray-500 dark:text-gray-400">No guarantor information available</p>
+                            <a href="{% url 'clients:client_edit' client.id %}" class="mt-3 inline-flex items-center text-blue-600 hover:text-blue-700">
+                                <i class="fas fa-plus-circle mr-1"></i> Add Guarantor
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Assets Tab -->
+                    <div x-show="activeTab === 'assets'" x-cloak>
+                        <div class="space-y-3">
+                            {% for asset in assets %}
+                            <div class="border dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="flex items-center space-x-2">
+                                            <i class="fas 
+                                                {% if asset.asset_type == 'vehicle' %}fa-car
+                                                {% elif asset.asset_type == 'property' %}fa-home
+                                                {% elif asset.asset_type == 'equipment' %}fa-microchip
+                                                {% else %}fa-gem{% endif %} 
+                                                text-blue-500"></i>
+                                            <h4 class="font-semibold text-gray-800 dark:text-white">{{ asset.get_asset_type_display }}</h4>
+                                        </div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ asset.description|truncatewords:20 }}</p>
+                                        <div class="flex items-center space-x-4 mt-2">
+                                            <p class="text-sm font-medium text-green-600 dark:text-green-400">ZMW {{ asset.estimated_value|floatformat:2 }}</p>
+                                            {% if asset.serial_number %}
+                                            <p class="text-xs text-gray-400">SN: {{ asset.serial_number }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs rounded-full flex items-center space-x-1 {% if asset.is_verified %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
+                                        <i class="fas {% if asset.is_verified %}fa-check-circle{% else %}fa-clock{% endif %} text-xs"></i>
+                                        <span>{% if asset.is_verified %}Verified{% else %}Pending{% endif %}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-12">
+                                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-box-open text-4xl text-gray-400"></i>
+                                </div>
+                                <p class="text-gray-500 dark:text-gray-400">No assets recorded</p>
+                                <button @click="activeTab = 'info'" class="mt-3 text-blue-600 hover:text-blue-700 text-sm">Edit client to add assets</button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Loans Tab -->
+                    <div x-show="activeTab === 'loans'" x-cloak>
+                        <div class="space-y-3">
+                            {% for loan in loans %}
+                            <div class="border dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                                <div class="flex justify-between items-start flex-wrap gap-2">
+                                    <div>
+                                        <div class="flex items-center space-x-3">
+                                            <h4 class="font-semibold text-gray-800 dark:text-white">Loan #{{ loan.loan_id|default:loan.id }}</h4>
+                                            <span class="px-2 py-0.5 text-xs rounded-full 
+                                                {% if loan.status == 'active' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                                                {% elif loan.status == 'completed' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
+                                                {% elif loan.status == 'defaulted' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                                                {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
+                                                {{ loan.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 mt-3">
+                                            <p class="text-sm"><span class="text-gray-500">Principal:</span> <span class="font-medium">ZMW {{ loan.principal|floatformat:2 }}</span></p>
+                                            <p class="text-sm"><span class="text-gray-500">Interest Rate:</span> <span class="font-medium">{{ loan.interest_rate }}%</span></p>
+                                            <p class="text-sm"><span class="text-gray-500">Start Date:</span> {{ loan.start_date|date:"M d, Y" }}</p>
+                                            <p class="text-sm"><span class="text-gray-500">Due Date:</span> {{ loan.due_date|date:"M d, Y" }}</p>
+                                            <p class="text-sm"><span class="text-gray-500">Balance:</span> <span class="font-semibold {% if loan.balance > 0 %}text-orange-600{% else %}text-green-600{% endif %}">ZMW {{ loan.balance|floatformat:2 }}</span></p>
+                                        </div>
+                                    </div>
+                                    <a href="{% url 'loans:loan_detail' loan.id %}" class="text-blue-600 hover:text-blue-700 text-sm">
+                                        View Details <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-12">
+                                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-file-invoice-dollar text-4xl text-gray-400"></i>
+                                </div>
+                                <p class="text-gray-500 dark:text-gray-400">No loans found for this client</p>
+                                <a href="{% url 'loans:loan_create' %}?client={{ client.id }}" class="mt-3 inline-flex items-center text-blue-600 hover:text-blue-700">
+                                    <i class="fas fa-plus-circle mr-1"></i> Create New Loan
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Documents Tab -->
+                    <div x-show="activeTab === 'documents'" x-cloak>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% if client.nrc_document %}
+                                <div class="border dark:border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fas fa-id-card text-3xl text-red-500"></i>
+                                            <div>
+                                                <h4 class="font-semibold text-gray-800 dark:text-white">NRC Document</h4>
+                                                <p class="text-xs text-gray-500">Uploaded on {{ client.updated_at|date:"M d, Y" }}</p>
+                                            </div>
+                                        </div>
+                                        <a href="{{ client.nrc_document.url }}" target="_blank" class="text-blue-600 hover:text-blue-700">
+                                            <i class="fas fa-download"></i> View
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if client.proof_of_residence %}
+                                <div class="border dark:border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fas fa-home text-3xl text-blue-500"></i>
+                                            <div>
+                                                <h4 class="font-semibold text-gray-800 dark:text-white">Proof of Residence</h4>
+                                                <p class="text-xs text-gray-500">Uploaded on {{ client.updated_at|date:"M d, Y" }}</p>
+                                            </div>
+                                        </div>
+                                        <a href="{{ client.proof_of_residence.url }}" target="_blank" class="text-blue-600 hover:text-blue-700">
+                                            <i class="fas fa-download"></i> View
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if client.proof_of_income %}
+                                <div class="border dark:border-gray-700 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fas fa-file-invoice text-3xl text-green-500"></i>
+                                            <div>
+                                                <h4 class="font-semibold text-gray-800 dark:text-white">Proof of Income</h4>
+                                                <p class="text-xs text-gray-500">Uploaded on {{ client.updated_at|date:"M d, Y" }}</p>
+                                            </div>
+                                        </div>
+                                        <a href="{{ client.proof_of_income.url }}" target="_blank" class="text-blue-600 hover:text-blue-700">
+                                            <i class="fas fa-download"></i> View
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if not client.nrc_document and not client.proof_of_residence and not client.proof_of_income %}
+                            <div class="text-center py-12">
+                                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-file-alt text-4xl text-gray-400"></i>
+                                </div>
+                                <p class="text-gray-500 dark:text-gray-400">No documents uploaded</p>
+                                <a href="{% url 'clients:client_edit' client.id %}" class="mt-3 inline-flex items-center text-blue-600 hover:text-blue-700">
+                                    <i class="fas fa-upload mr-1"></i> Upload Documents
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Notes Tab -->
+                    <div x-show="activeTab === 'notes'" x-cloak>
+                        <div class="space-y-4">
+                            <form method="post" action="{% url 'clients:add_note' client.id %}" class="mb-6" @submit="submitting = true">
+                                {% csrf_token %}
+                                <div class="flex items-start space-x-3">
+                                    <div class="flex-1">
+                                        <textarea name="note" rows="3" 
+                                                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                                                  placeholder="Add a note about this client..."></textarea>
+                                    </div>
+                                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-1">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <span>Post</span>
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <div class="space-y-3">
+                                {% for note in notes %}
+                                <div class="border-l-4 border-blue-500 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-r-lg hover:shadow-sm transition">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <p class="text-gray-800 dark:text-white whitespace-pre-wrap">{{ note.note }}</p>
+                                            <div class="flex items-center space-x-3 mt-2">
+                                                <div class="flex items-center text-xs text-gray-500">
+                                                    <i class="fas fa-user-circle mr-1"></i>
+                                                    {{ note.created_by.get_full_name|default:note.created_by.username }}
+                                                </div>
+                                                <div class="flex items-center text-xs text-gray-500">
+                                                    <i class="fas fa-clock mr-1"></i>
+                                                    {{ note.created_at|date:"M d, Y H:i" }}
+                                                </div>
+                                                {% if note.note_type %}
+                                                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                                                    {{ note.get_note_type_display }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% if user == note.created_by or user.is_staff %}
+                                        <button @click="deleteNote({{ note.id }})" class="text-gray-400 hover:text-red-500 transition">
+                                            <i class="fas fa-trash-alt text-sm"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-12">
+                                    <div class="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-comments text-4xl text-gray-400"></i>
+                                    </div>
+                                    <p class="text-gray-500 dark:text-gray-400">No notes yet</p>
+                                    <p class="text-sm text-gray-400 mt-1">Add a note above to start tracking client interactions</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" style="background-color: rgba(0,0,0,0.5)">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all">
+                <div class="text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Delete Client</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        Are you sure you want to delete <span class="font-semibold">{{ client.full_name }}</span>? This action cannot be undone and will also delete all associated data including loans, assets, and notes.
+                    </p>
+                    <div class="flex justify-center space-x-3">
+                        <button @click="showDeleteModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 transition">
+                            Cancel
+                        </button>
+                        <form method="post" action="{% url 'clients:client_delete' client.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                                <i class="fas fa-trash mr-1"></i> Delete Permanently
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+
+<script>
+function clientDetail() {
+    return {
+        activeTab: 'info',
+        showDeleteModal: false,
+        
+        init() {
+            // Check for hash in URL to set active tab
+            const hash = window.location.hash.substring(1);
+            if (['info', 'guarantor', 'assets', 'loans', 'documents', 'notes'].includes(hash)) {
+                this.activeTab = hash;
+            }
+            
+            // Update URL hash when tab changes
+            this.$watch('activeTab', (value) => {
+                window.location.hash = value;
+            });
+        },
+        
+        copyClientId() {
+            const clientId = '{{ client.client_id }}';
+            navigator.clipboard.writeText(clientId).then(() => {
+                // Show temporary notification
+                const notification = document.createElement('div');
+                notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 fade-in';
+                notification.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Client ID copied to clipboard!';
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 2000);
+            });
+        },
+        
+        confirmDelete() {
+            this.showDeleteModal = true;
+        },
+        
+        deleteNote(noteId) {
+            if (confirm('Are you sure you want to delete this note?')) {
+                fetch(`/clients/notes/${noteId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                });
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

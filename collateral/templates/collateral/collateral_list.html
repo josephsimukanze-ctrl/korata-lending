@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Collateral Management - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Collateral Management</h2>
+                <p class="mt-1 opacity-90">Manage all collateral assets and track valuations</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-gem text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Collateral</p>
+                    <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ stats.total }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-gem text-blue-600 dark:text-blue-300 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-chart-line mr-1"></i> Total items in system
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Value</p>
+                    <p class="text-2xl font-bold text-green-600">ZMW {{ stats.total_value|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-600 dark:text-green-300 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-chart-line mr-1"></i> Total estimated value
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Pledged</p>
+                    <p class="text-2xl font-bold text-purple-600">{{ stats.pledged }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-handshake text-purple-600 dark:text-purple-300 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-chart-line mr-1"></i> Currently pledged as collateral
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Verified</p>
+                    <p class="text-2xl font-bold text-emerald-600">{{ stats.verified }}</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-300 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-chart-line mr-1"></i> KYC verified assets
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filter Bar -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" name="search" value="{{ search_query }}" 
+                           placeholder="Search by ID, title, serial number, or client..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+            </div>
+            <div>
+                <select name="status" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">All Status</option>
+                    <option value="available" {% if status_filter == 'available' %}selected{% endif %}>Available</option>
+                    <option value="pledged" {% if status_filter == 'pledged' %}selected{% endif %}>Pledged</option>
+                    <option value="seized" {% if status_filter == 'seized' %}selected{% endif %}>Seized</option>
+                    <option value="sold" {% if status_filter == 'sold' %}selected{% endif %}>Sold</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Actions -->
+    <div class="flex justify-between items-center">
+        <div class="flex space-x-3">
+            <a href="{% url 'collateral:create' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>Add Collateral</span>
+            </a>
+            <a href="{% url 'collateral:export_csv' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+                <i class="fas fa-download"></i>
+                <span>Export CSV</span>
+            </a>
+        </div>
+        <div class="flex space-x-3">
+            <a href="{% url 'collateral:asset_types' %}" class="text-gray-600 hover:text-gray-800 dark:text-gray-400 transition">
+                <i class="fas fa-tags mr-1"></i> Asset Types
+            </a>
+            <a href="{% url 'collateral:inspections' %}" class="text-gray-600 hover:text-gray-800 dark:text-gray-400 transition">
+                <i class="fas fa-clipboard-list mr-1"></i> Inspections
+            </a>
+            <a href="{% url 'collateral:movements' %}" class="text-gray-600 hover:text-gray-800 dark:text-gray-400 transition">
+                <i class="fas fa-truck mr-1"></i> Movements
+            </a>
+        </div>
+    </div>
+    
+    <!-- Collateral Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Title / Client</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Value</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Condition</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Verification</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Location</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for collateral in collaterals %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">{{ collateral.collateral_id }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ collateral.title }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ collateral.client.full_name }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-right font-semibold text-green-600">
+                            ZMW {{ collateral.estimated_value|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if collateral.condition == 'new' %}bg-green-100 text-green-700
+                                {% elif collateral.condition == 'excellent' %}bg-blue-100 text-blue-700
+                                {% elif collateral.condition == 'very_good' %}bg-teal-100 text-teal-700
+                                {% elif collateral.condition == 'good' %}bg-emerald-100 text-emerald-700
+                                {% elif collateral.condition == 'fair' %}bg-yellow-100 text-yellow-700
+                                {% elif collateral.condition == 'poor' %}bg-orange-100 text-orange-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ collateral.get_condition_display_name }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if collateral.status == 'available' %}bg-green-100 text-green-700
+                                {% elif collateral.status == 'pledged' %}bg-blue-100 text-blue-700
+                                {% elif collateral.status == 'seized' %}bg-red-100 text-red-700
+                                {% elif collateral.status == 'sold' %}bg-purple-100 text-purple-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ collateral.get_status_display_name }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if collateral.verification_status == 'verified' %}
+                            <span class="text-green-600 text-sm"><i class="fas fa-check-circle mr-1"></i>Verified</span>
+                            {% elif collateral.verification_status == 'pending' %}
+                            <span class="text-yellow-600 text-sm"><i class="fas fa-clock mr-1"></i>Pending</span>
+                            {% elif collateral.verification_status == 'rejected' %}
+                            <span class="text-red-600 text-sm"><i class="fas fa-times-circle mr-1"></i>Rejected</span>
+                            {% else %}
+                            <span class="text-gray-600 text-sm"><i class="fas fa-question-circle mr-1"></i>Review</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ collateral.storage_location|truncatechars:20 }}
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm whitespace-nowrap">
+                            <a href="{% url 'collateral:detail' collateral.id %}" class="text-blue-600 hover:text-blue-900 mx-1" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'collateral:edit' collateral.id %}" class="text-green-600 hover:text-green-900 mx-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'collateral:delete' collateral.id %}" class="text-red-600 hover:text-red-900 mx-1" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% if collateral.verification_status == 'pending' %}
+                            <a href="{% url 'collateral:verify' collateral.id %}" class="text-purple-600 hover:text-purple-900 mx-1" title="Verify">
+                                <i class="fas fa-check-double"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-gem text-4xl mb-2 block"></i>
+                            <p>No collateral items found</p>
+                            <a href="{% url 'collateral:create' %}" class="mt-2 inline-block text-blue-600 hover:text-blue-700">
+                                Add your first collateral
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if collaterals.has_other_pages %}
+        <div class="px-6 py-4 border-t dark:border-gray-700 flex justify-between items-center">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Showing {{ collaterals.start_index }} to {{ collaterals.end_index }} of {{ collaterals.paginator.count }} items
+            </div>
+            <div class="flex space-x-2">
+                {% if collaterals.has_previous %}
+                <a href="?page={{ collaterals.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                
+                <span class="px-3 py-1">{{ collaterals.number }}</span>
+                
+                {% if collaterals.has_next %}
+                <a href="?page={{ collaterals.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Auto-refresh stats every 30 seconds
+function updateStats() {
+    fetch('/collateral/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            // Update stats if needed (they're already rendered from server)
+            console.log('Stats updated:', data);
+        })
+        .catch(error => console.error('Error fetching stats:', error));
+}
+
+// Refresh stats periodically
+setInterval(updateStats, 30000);
+</script>
+{% endblock %}

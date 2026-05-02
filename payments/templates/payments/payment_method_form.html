@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Payment Methods{% endblock %}
+
+{% block content %}
+<div x-data="paymentMethodForm()" x-init="initForm()" class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'payments:payment_method_list' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Payment Methods
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ title }}</h2>
+                    <p class="text-blue-100 mt-1 flex items-center">
+                        <i class="fas fa-credit-card mr-2 text-sm"></i>
+                        Configure payment method settings
+                    </p>
+                </div>
+                <div class="hidden md:block">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-credit-card text-white text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" class="p-8" id="paymentMethodForm" @submit="validateForm">
+            {% csrf_token %}
+            
+            <!-- Error Messages -->
+            <div x-show="errors.length > 0" x-cloak class="mb-6 animate-shake">
+                <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-500 text-lg"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-semibold text-red-800 dark:text-red-200">Please correct the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <template x-for="error in errors" :key="error">
+                                        <li x-text="error"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Method Name -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-tag mr-2 text-blue-500"></i>Method Name <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-tag text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="name" required 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="e.g., MTN Mobile Money">
+                    </div>
+                </div>
+                
+                <!-- Method Type -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-credit-card mr-2 text-purple-500"></i>Method Type <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-credit-card text-gray-400 group-focus-within:text-purple-500 transition-colors"></i>
+                        </div>
+                        <select name="method_type" required class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="cash">💰 Cash</option>
+                            <option value="bank_transfer">🏦 Bank Transfer</option>
+                            <option value="mobile_money">📱 Mobile Money</option>
+                            <option value="cheque">📝 Cheque</option>
+                            <option value="card">💳 Card</option>
+                            <option value="other">📦 Other</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Account Name -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-2 text-green-500"></i>Account Name
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="account_name" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="Account holder name">
+                    </div>
+                </div>
+                
+                <!-- Account Number -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-hashtag mr-2 text-orange-500"></i>Account Number
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-hashtag text-gray-400 group-focus-within:text-orange-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="account_number" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="Account number">
+                    </div>
+                </div>
+                
+                <!-- Bank Name -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-building mr-2 text-red-500"></i>Bank Name
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-building text-gray-400 group-focus-within:text-red-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="bank_name" 
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="Bank name">
+                    </div>
+                </div>
+                
+                <!-- Mobile Provider -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-mobile-alt mr-2 text-teal-500"></i>Mobile Provider
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-mobile-alt text-gray-400 group-focus-within:text-teal-500 transition-colors"></i>
+                        </div>
+                        <select name="mobile_provider" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="">Select Provider</option>
+                            <option value="mtn">📶 MTN</option>
+                            <option value="airtel">📶 Airtel</option>
+                            <option value="zamtel">📶 Zamtel</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Processing Fee (%) -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-percent mr-2 text-yellow-500"></i>Processing Fee (%)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">%</span>
+                        </div>
+                        <input type="number" name="processing_fee_percent" step="0.01" value="0"
+                               class="w-full pl-8 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Percentage of transaction amount</p>
+                </div>
+                
+                <!-- Fixed Fee -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-money-bill-wave mr-2 text-green-500"></i>Fixed Fee (ZMW)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">ZMW</span>
+                        </div>
+                        <input type="number" name="processing_fee_fixed" step="0.01" value="0"
+                               class="w-full pl-12 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Fixed fee per transaction</p>
+                </div>
+            </div>
+            
+            <!-- Status Toggles -->
+            <div class="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center">
+                    <i class="fas fa-toggle-on mr-2 text-blue-500"></i>
+                    Status Settings
+                </h3>
+                <div class="flex flex-wrap gap-6">
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <input type="checkbox" name="is_active" checked class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <i class="fas fa-check-circle mr-1"></i>Active
+                        </span>
+                        <span class="text-xs text-gray-500">(Method can be used for payments)</span>
+                    </label>
+                    
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <input type="checkbox" name="is_default" class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <i class="fas fa-star mr-1"></i>Set as Default
+                        </span>
+                        <span class="text-xs text-gray-500">(Will be selected by default)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Fee Preview Card -->
+            <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-blue-100 dark:border-gray-600 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center">
+                        <i class="fas fa-calculator text-blue-500 mr-2"></i>
+                        Fee Preview
+                    </h3>
+                    <div class="text-xs text-gray-500">
+                        <i class="fas fa-sync-alt mr-1"></i> Sample calculation
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-gray-600 dark:text-gray-400">For a payment of ZMW 1,000:</span>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Fee: <span class="font-semibold text-blue-600" x-text="sampleFee">ZMW 0.00</span></div>
+                            <div class="text-sm text-gray-500">Total: <span class="font-bold text-green-600" x-text="sampleTotal">ZMW 1,000.00</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-gray-600 dark:text-gray-400">For a payment of ZMW 10,000:</span>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Fee: <span class="font-semibold text-blue-600" x-text="sampleFeeLarge">ZMW 0.00</span></div>
+                            <div class="text-sm text-gray-500">Total: <span class="font-bold text-green-600" x-text="sampleTotalLarge">ZMW 10,000.00</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-blue-200 dark:border-gray-600">
+                    <p class="text-xs text-gray-500 flex items-center">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Total = Amount + (Amount × Percentage Fee) + Fixed Fee
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'payments:payment_method_list' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-save mr-2"></i>Save Method
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    
+    /* Form input styles */
+    input, select {
+        transition: all 0.2s ease;
+    }
+    
+    input:focus, select:focus {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Checkbox styles */
+    input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    .animate-shake {
+        animation: shake 0.3s ease-in-out;
+    }
+</style>
+
+<script>
+function paymentMethodForm() {
+    return {
+        errors: [],
+        feePercent: 0,
+        feeFixed: 0,
+        sampleFee: 'ZMW 0.00',
+        sampleTotal: 'ZMW 1,000.00',
+        sampleFeeLarge: 'ZMW 0.00',
+        sampleTotalLarge: 'ZMW 10,000.00',
+        
+        initForm() {
+            const feePercentInput = document.querySelector('input[name="processing_fee_percent"]');
+            const feeFixedInput = document.querySelector('input[name="processing_fee_fixed"]');
+            
+            if (feePercentInput) {
+                feePercentInput.addEventListener('input', () => this.calculateFees());
+                feePercentInput.addEventListener('change', () => this.calculateFees());
+            }
+            
+            if (feeFixedInput) {
+                feeFixedInput.addEventListener('input', () => this.calculateFees());
+                feeFixedInput.addEventListener('change', () => this.calculateFees());
+            }
+            
+            this.calculateFees();
+        },
+        
+        calculateFees() {
+            const feePercentInput = document.querySelector('input[name="processing_fee_percent"]');
+            const feeFixedInput = document.querySelector('input[name="processing_fee_fixed"]');
+            
+            this.feePercent = parseFloat(feePercentInput?.value) || 0;
+            this.feeFixed = parseFloat(feeFixedInput?.value) || 0;
+            
+            // Calculate for ZMW 1,000
+            const amount1 = 1000;
+            const fee1 = (amount1 * this.feePercent / 100) + this.feeFixed;
+            const total1 = amount1 + fee1;
+            
+            this.sampleFee = `ZMW ${fee1.toFixed(2)}`;
+            this.sampleTotal = `ZMW ${total1.toFixed(2)}`;
+            
+            // Calculate for ZMW 10,000
+            const amount2 = 10000;
+            const fee2 = (amount2 * this.feePercent / 100) + this.feeFixed;
+            const total2 = amount2 + fee2;
+            
+            this.sampleFeeLarge = `ZMW ${fee2.toFixed(2)}`;
+            this.sampleTotalLarge = `ZMW ${total2.toFixed(2)}`;
+        },
+        
+        validateForm(event) {
+            this.errors = [];
+            const nameInput = document.querySelector('input[name="name"]');
+            const methodTypeSelect = document.querySelector('select[name="method_type"]');
+            
+            if (!nameInput?.value.trim()) {
+                this.errors.push('Method name is required');
+            }
+            
+            if (!methodTypeSelect?.value) {
+                this.errors.push('Method type is required');
+            }
+            
+            if (this.errors.length > 0) {
+                event.preventDefault();
+                const errorDiv = document.querySelector('.bg-red-50');
+                if (errorDiv) {
+                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+</script>
+{% endblock %}

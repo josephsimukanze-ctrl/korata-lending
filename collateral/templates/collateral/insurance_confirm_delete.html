@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Remove Insurance - {{ collateral.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:insurance_list' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Insurance Policies
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+            <h2 class="text-xl font-bold text-white">Remove Insurance Policy</h2>
+            <p class="text-red-100 mt-1">Are you sure you want to remove this insurance policy?</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                    <div>
+                        <p class="text-sm text-red-700 dark:text-red-300">
+                            <strong>Warning:</strong> This action will remove the insurance policy from this collateral.
+                        </p>
+                        <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+                            This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold text-gray-800 dark:text-white mb-2">Insurance Policy Details</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Collateral:</span>
+                        <span class="font-medium">{{ collateral.title }} ({{ collateral.collateral_id }})</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Client:</span>
+                        <span class="font-medium">{{ collateral.client.full_name }}</span>
+                    </div>
+                    {% if collateral.insurance_provider %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Insurance Provider:</span>
+                        <span>{{ collateral.insurance_provider }}</span>
+                    </div>
+                    {% endif %}
+                    {% if collateral.insurance_policy_number %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Policy Number:</span>
+                        <span class="font-mono">{{ collateral.insurance_policy_number }}</span>
+                    </div>
+                    {% endif %}
+                    {% if collateral.insurance_expiry_date %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Expiry Date:</span>
+                        <span class="{% if collateral.insurance_expiry_date < now %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ collateral.insurance_expiry_date|date:"Y-m-d" }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-end space-x-3">
+                    <a href="{% url 'collateral:insurance_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-trash mr-2"></i>Remove Insurance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

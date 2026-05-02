@@ -1,0 +1,283 @@
+<header class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
+    <div class="flex items-center justify-between px-4 py-3 lg:px-6">
+        <!-- Left Section -->
+        <div class="flex items-center space-x-4">
+            <!-- Mobile menu button -->
+            <button @click="sidebarOpen = !sidebarOpen" 
+                    class="lg:hidden text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            
+            <!-- Logo (visible on mobile when sidebar is closed) -->
+            <div class="lg:hidden flex items-center space-x-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                    <i class="fas fa-hand-holding-usd text-white text-sm"></i>
+                </div>
+                <span class="text-base font-bold text-gray-800 dark:text-white">Korata</span>
+            </div>
+            
+            <!-- Desktop Logo -->
+            <div class="hidden lg:flex items-center space-x-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                    <i class="fas fa-hand-holding-usd text-white text-sm"></i>
+                </div>
+                <div>
+                    <span class="text-lg font-bold text-gray-800 dark:text-white">Korata Lending</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">v2.0</span>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl px-4 py-2 min-w-[320px] transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-white dark:focus-within:bg-gray-800">
+                <i class="fas fa-search text-gray-400 dark:text-gray-500 text-sm"></i>
+                <input type="text" 
+                       id="globalSearch"
+                       placeholder="Search clients, loans, users..." 
+                       class="bg-transparent border-none focus:outline-none ml-3 w-full text-sm dark:text-white placeholder-gray-500">
+                <kbd class="hidden lg:inline ml-2 px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 rounded-md text-gray-600 dark:text-gray-300 font-mono">⌘K</kbd>
+            </div>
+        </div>
+        
+        <!-- Right Section -->
+        <div class="flex items-center space-x-2">
+            <!-- Quick Actions Dropdown -->
+            <div class="relative hidden md:block" x-data="{ quickOpen: false }">
+                <button @click="quickOpen = !quickOpen" 
+                        class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl p-2 transition-all duration-200">
+                    <i class="fas fa-plus-circle text-xl"></i>
+                </button>
+                <div x-show="quickOpen" 
+                     @click.away="quickOpen = false"
+                     x-transition
+                     class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="py-2">
+                        <a href="{% url 'clients:client_create' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-user-plus w-5 mr-3 text-blue-500"></i> New Client
+                        </a>
+                        <a href="{% url 'loans:loan_create' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-hand-holding-usd w-5 mr-3 text-green-500"></i> New Loan
+                        </a>
+                        <a href="{% url 'payments:payment_create' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-credit-card w-5 mr-3 text-purple-500"></i> Record Payment
+                        </a>
+                        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                        <a href="{% url 'loans:loan_calculator' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-calculator w-5 mr-3 text-orange-500"></i> Loan Calculator
+                        </a>
+                        <a href="{% url 'reports:collections' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-chart-line w-5 mr-3 text-red-500"></i> Generate Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Real-time Clock -->
+            <div class="hidden lg:block text-right">
+                <div class="text-sm font-semibold text-gray-800 dark:text-white" x-text="currentTime"></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="currentDate"></div>
+            </div>
+            
+            <!-- Dark Mode Toggle -->
+            <button @click="darkMode = !darkMode" 
+                    class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl p-2 transition-all duration-200">
+                <i class="fas text-xl" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+            </button>
+            
+            <!-- Notification Button -->
+            <a href="{% url 'notifications:list' %}" class="relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl p-2 transition-all duration-200">
+                <i class="fas fa-bell text-xl"></i>
+                <span id="navbarUnreadCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 hidden font-medium">0</span>
+            </a>
+            
+            <!-- User Menu Dropdown -->
+            {% if user.is_authenticated %}
+            <div class="relative" x-data="{ userOpen: false }">
+                <button @click="userOpen = !userOpen" 
+                        class="flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl px-2 py-1.5 transition-all duration-200">
+                    <div class="relative">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" class="w-8 h-8 rounded-full object-cover border-2 border-blue-500">
+                        {% else %}
+                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                {{ user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                    </div>
+                    <span class="hidden md:inline text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ user.get_short_name|default:user.username }}
+                    </span>
+                    <i class="fas fa-chevron-down text-xs text-gray-500 transition-transform duration-200" :class="{'rotate-180': userOpen}"></i>
+                </button>
+                
+                <!-- Dropdown Menu -->
+                <div x-show="userOpen" 
+                     @click.away="userOpen = false"
+                     x-transition
+                     class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                        <p class="text-sm font-bold text-gray-800 dark:text-white">{{ user.get_full_name|default:user.username }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{{ user.email }}</p>
+                        <div class="mt-2">
+                            <span class="inline-flex items-center px-2 py-0.5 text-xs rounded-full 
+                                {% if user.role == 'ceo' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                                {% elif user.role == 'admin' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                {% elif user.role == 'accountant' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                                {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400{% endif %}">
+                                <i class="fas {{ user.get_role_icon }} mr-1 text-xs"></i>
+                                {{ user.get_role_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="py-2">
+                        <a href="{% url 'users:profile' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-user-circle w-5 mr-3 text-blue-500 text-base"></i> My Profile
+                        </a>
+                        <a href="{% url 'users:profile_edit' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-edit w-5 mr-3 text-green-500 text-base"></i> Edit Profile
+                        </a>
+                        <a href="{% url 'users:change_password' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-key w-5 mr-3 text-orange-500 text-base"></i> Change Password
+                        </a>
+                        <a href="{% url 'users:preferences' %}" class="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-sliders-h w-5 mr-3 text-purple-500 text-base"></i> Preferences
+                        </a>
+                        <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                        <a href="{% url 'users:logout' %}" class="flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            <i class="fas fa-sign-out-alt w-5 mr-3 text-red-500 text-base"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <a href="{% url 'users:login' %}" class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+                <i class="fas fa-sign-in-alt mr-2"></i> Login
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<script>
+// Update unread notification count
+function updateNavbarUnreadCount() {
+    fetch('/notifications/api/')
+        .then(response => response.json())
+        .then(data => {
+            const count = data.unread_count || 0;
+            const badge = document.getElementById('navbarUnreadCount');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching notifications:', error));
+}
+
+// Global search with API integration
+function setupGlobalSearch() {
+    const searchInput = document.getElementById('globalSearch');
+    if (!searchInput) return;
+    
+    let searchTimeout;
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const query = e.target.value;
+        
+        searchTimeout = setTimeout(() => {
+            if (query.length >= 2) {
+                fetch(`/api/search/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Handle search results
+                        console.log('Search results:', data);
+                    })
+                    .catch(error => console.error('Search error:', error));
+            }
+        }, 300);
+    });
+}
+
+// Global search keyboard shortcut
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+    
+    // Escape key to clear search
+    if (e.key === 'Escape') {
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput && document.activeElement === searchInput) {
+            searchInput.blur();
+            searchInput.value = '';
+        }
+    }
+});
+
+// Format time and date
+function updateDateTime() {
+    if (window.Alpine) {
+        const app = document.querySelector('[x-data]')?.__x;
+        if (app) {
+            const now = new Date();
+            app.$data.currentTime = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            app.$data.currentDate = now.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+    }
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateNavbarUnreadCount();
+    setupGlobalSearch();
+    updateDateTime();
+    
+    // Update time every second
+    setInterval(updateDateTime, 1000);
+    
+    // Update notifications every 30 seconds
+    setInterval(updateNavbarUnreadCount, 30000);
+});
+</script>
+
+<style>
+    .rotate-180 { transform: rotate(180deg); }
+    [x-cloak] { display: none !important; }
+    
+    /* Smooth transitions */
+    .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
+    }
+    
+    /* Focus ring styles */
+    button:focus, a:focus, input:focus {
+        outline: none;
+        ring: 2px solid #3b82f6;
+        ring-offset: 2px;
+    }
+    
+    /* Search bar animation */
+    .focus\:ring-2:focus {
+        ring: 2px solid #3b82f6;
+    }
+</style>

@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ user_obj.full_name }} - User Details{% endblock %}
+
+{% block content %}
+<div x-data="userDetail()" x-init="init()" class="fade-in">
+    <div class="mb-6">
+        <a href="{% url 'users:user_list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Users
+        </a>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Profile Card -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden sticky top-20">
+                <!-- Cover Photo -->
+                <div class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-32 relative">
+                    <div class="absolute inset-0 bg-black opacity-20"></div>
+                </div>
+                
+                <!-- Profile Image -->
+                <div class="relative px-6 pb-6">
+                    <div class="flex justify-center -mt-12 mb-4">
+                        <div class="relative">
+                            {% if user_obj.profile_picture %}
+                                <img src="{{ user_obj.profile_picture.url }}" class="w-28 h-28 rounded-full border-4 border-white shadow-lg object-cover">
+                            {% else %}
+                                <div class="w-28 h-28 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white text-3xl font-bold"
+                                     style="background: linear-gradient(135deg, #667eea, #764ba2)">
+                                    {{ user_obj.initials }}
+                                </div>
+                            {% endif %}
+                            <span class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" x-show="isOnline"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ user_obj.full_name }}</h2>
+                        <p class="text-gray-500 dark:text-gray-400">@{{ user_obj.username }}</p>
+                        <div class="mt-2 flex justify-center space-x-2">
+                            <span class="px-3 py-1 text-sm rounded-full {{ user_obj.get_role_color }} text-white">
+                                <i :class="getRoleIcon()" class="mr-1"></i>
+                                {{ user_obj.get_role_display }}
+                            </span>
+                            <span class="px-3 py-1 text-sm rounded-full" :class="user_obj.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                                <i :class="user_obj.is_active ? 'fas fa-check-circle' : 'fas fa-times-circle'" class="mr-1"></i>
+                                {% if user_obj.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Login Credentials Section (for newly created users) -->
+                    {% if show_credentials and generated_password %}
+                    <div class="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border-2 border-yellow-400 dark:border-yellow-600 shadow-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
+                                <i class="fas fa-key text-white text-sm"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-yellow-800 dark:text-yellow-300">
+                                New User Credentials
+                            </h4>
+                            <span class="ml-auto text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded-full">
+                                Save These
+                            </span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xs text-gray-500 uppercase tracking-wide">Username</span>
+                                        <p class="text-sm font-mono font-bold text-gray-800 dark:text-white mt-1">{{ generated_username|default:user_obj.username }}</p>
+                                    </div>
+                                    <button onclick="copyToClipboard('{{ generated_username|default:user_obj.username }}')" 
+                                            class="text-gray-400 hover:text-blue-500 transition p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xs text-gray-500 uppercase tracking-wide">Password</span>
+                                        <p class="text-sm font-mono font-bold text-gray-800 dark:text-white mt-1">{{ generated_password }}</p>
+                                    </div>
+                                    <button onclick="copyToClipboard('{{ generated_password }}')" 
+                                            class="text-gray-400 hover:text-blue-500 transition p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center justify-between text-xs">
+                            <div class="flex items-center text-yellow-700 dark:text-yellow-400">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <span>User can login with these credentials</span>
+                            </div>
+                            <button onclick="hideCredentials()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times-circle"></i> Dismiss
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Contact Info -->
+                    <div class="mt-6 space-y-3">
+                        <div class="flex items-center text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                            <i class="fas fa-envelope w-5 text-blue-500"></i>
+                            <span class="ml-3 flex-1">{{ user_obj.email }}</span>
+                            <button @click="copyToClipboard('{{ user_obj.email }}')" class="text-gray-400 hover:text-blue-500">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                            <i class="fas fa-phone w-5 text-green-500"></i>
+                            <span class="ml-3">{{ user_obj.phone_number|default:"Not provided" }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                            <i class="fas fa-building w-5 text-purple-500"></i>
+                            <span class="ml-3">{{ user_obj.department|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                            <i class="fas fa-id-card w-5 text-orange-500"></i>
+                            <span class="ml-3">ID: {{ user_obj.employee_id|default:"Not assigned" }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                            <i class="fas fa-calendar-alt w-5 text-teal-500"></i>
+                            <span class="ml-3">Joined: {{ user_obj.date_joined|date:"M d, Y" }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-6 space-y-2">
+                        {% if can_edit %}
+                        <a href="{% url 'users:user_edit' user_obj.id %}" class="flex items-center justify-center w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-edit mr-2"></i> Edit Profile
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'users:change_password' %}" class="flex items-center justify-center w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-key mr-2"></i> Change Password
+                        </a>
+                        {% if can_reset_password %}
+                        <a href="{% url 'users:reset_password' user_obj.id %}" class="flex items-center justify-center w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition">
+                            <i class="fas fa-sync-alt mr-2"></i> Reset Password
+                        </a>
+                        {% endif %}
+                        {% if can_delete %}
+                        <a href="{% url 'users:user_delete' user_obj.id %}" class="flex items-center justify-center w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                            <i class="fas fa-trash mr-2"></i> Delete User
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Details Tabs -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                <!-- Tab Navigation -->
+                <div class="border-b dark:border-gray-700 overflow-x-auto">
+                    <div class="flex">
+                        <button @click="activeTab = 'info'" 
+                                :class="activeTab === 'info' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-user-circle mr-2"></i>Information
+                        </button>
+                        <button @click="activeTab = 'activity'" 
+                                :class="activeTab === 'activity' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-chart-line mr-2"></i>Activity
+                        </button>
+                        <button @click="activeTab = 'sessions'" 
+                                :class="activeTab === 'sessions' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-desktop mr-2"></i>Sessions
+                        </button>
+                        <button @click="activeTab = 'permissions'" 
+                                :class="activeTab === 'permissions' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-shield-alt mr-2"></i>Permissions
+                        </button>
+                        <button @click="activeTab = 'settings'" 
+                                :class="activeTab === 'settings' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                                class="px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+                            <i class="fas fa-sliders-h mr-2"></i>Settings
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <!-- Information Tab -->
+                    <div x-show="activeTab === 'info'" x-cloak>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">First Name</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-medium">{{ user_obj.first_name|default:"-" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Last Name</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-medium">{{ user_obj.last_name|default:"-" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Username</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-mono">{{ user_obj.username }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Email</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ user_obj.email }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Position</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ user_obj.position|default:"-" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Department</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ user_obj.department|default:"-" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Employee ID</label>
+                                <p class="mt-1 text-gray-800 dark:text-white font-mono">{{ user_obj.employee_id|default:"-" }}</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Hire Date</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ profile.hire_date|date:"M d, Y"|default:"-" }}</p>
+                            </div>
+                            {% if user_obj.bio %}
+                            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Bio</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ user_obj.bio }}</p>
+                            </div>
+                            {% endif %}
+                            {% if user_obj.address %}
+                            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                <label class="block text-xs font-medium text-gray-500 uppercase">Address</label>
+                                <p class="mt-1 text-gray-800 dark:text-white">{{ user_obj.address }}</p>
+                                <p class="text-sm text-gray-500">{{ user_obj.city }}, {{ user_obj.country }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Activity Tab -->
+                    <div x-show="activeTab === 'activity'" x-cloak>
+                        <div class="space-y-4">
+                            <!-- Stats Cards -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
+                                    <p class="text-2xl font-bold text-blue-600">{{ total_logins|default:0 }}</p>
+                                    <p class="text-xs text-gray-500">Total Logins</p>
+                                </div>
+                                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
+                                    <p class="text-2xl font-bold text-green-600">{{ total_activities|default:0 }}</p>
+                                    <p class="text-xs text-gray-500">Activities</p>
+                                </div>
+                                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-center">
+                                    <p class="text-2xl font-bold text-purple-600">{{ active_sessions.count }}</p>
+                                    <p class="text-xs text-gray-500">Active Sessions</p>
+                                </div>
+                                <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 text-center">
+                                    <p class="text-2xl font-bold text-orange-600">{{ login_count|default:0 }}</p>
+                                    <p class="text-xs text-gray-500">This Month</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Activity Timeline -->
+                            <div class="space-y-3 max-h-96 overflow-y-auto">
+                                <h4 class="font-semibold text-gray-700 dark:text-gray-300">Recent Activity</h4>
+                                {% for activity in activity_logs %}
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center
+                                        {% if activity.action == 'login' %}bg-green-100 text-green-600
+                                        {% elif activity.action == 'create' %}bg-blue-100 text-blue-600
+                                        {% elif activity.action == 'update' %}bg-yellow-100 text-yellow-600
+                                        {% elif activity.action == 'delete' %}bg-red-100 text-red-600
+                                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                        <i class="fas fa-{% if activity.action == 'login' %}sign-in-alt
+                                                 {% elif activity.action == 'logout' %}sign-out-alt
+                                                 {% elif activity.action == 'create' %}plus
+                                                 {% elif activity.action == 'update' %}edit
+                                                 {% elif activity.action == 'delete' %}trash
+                                                 {% else %}info{% endif %} text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm text-gray-800 dark:text-white">
+                                            <span class="font-medium">{{ activity.action|title }}</span>
+                                            {% if activity.model_name %}{{ activity.model_name }}{% endif %}
+                                            {% if activity.object_repr %}"{{ activity.object_repr }}"{% endif %}
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ activity.timestamp|date:"M d, Y H:i:s" }}</p>
+                                    </div>
+                                    {% if activity.ip_address %}
+                                    <div class="text-xs text-gray-400">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>{{ activity.ip_address }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-history text-4xl mb-2 block"></i>
+                                    <p>No activity records found</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sessions Tab -->
+                    <div x-show="activeTab === 'sessions'" x-cloak>
+                        <div class="space-y-3">
+                            {% for session in active_sessions %}
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-desktop text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-800 dark:text-white">
+                                            {{ session.device_type|default:"Unknown Device" }}
+                                        </p>
+                                        <p class="text-xs text-gray-500">IP: {{ session.ip_address }}</p>
+                                        <p class="text-xs text-gray-500">Login: {{ session.login_time|date:"M d, Y H:i" }}</p>
+                                    </div>
+                                </div>
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-desktop text-4xl mb-2 block"></i>
+                                <p>No active sessions</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Permissions Tab -->
+                    <div x-show="activeTab === 'permissions'" x-cloak>
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">Role: {{ user_obj.get_role_display }}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                    {% if user_obj.role == 'ceo' %}Full system access with all permissions
+                                    {% elif user_obj.role == 'admin' %}Administrative access with user management
+                                    {% elif user_obj.role == 'collateral_officer' %}Can manage clients and collateral
+                                    {% elif user_obj.role == 'accountant' %}Can process payments and view reports
+                                    {% elif user_obj.role == 'auditor' %}Read-only access to all data
+                                    {% else %}Custom permissions assigned{% endif %}
+                                </p>
+                            </div>
+                            
+                            <h4 class="font-semibold text-gray-800 dark:text-white">Assigned Permissions</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {% for perm in user_obj.get_permissions %}
+                                <div class="flex items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                   <span class="text-gray-700 dark:text-gray-300">{{ perm|title }}</span>
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-4 text-gray-500 col-span-2">
+                                    <i class="fas fa-shield-alt text-2xl mb-2 block"></i>
+                                    <p>No specific permissions assigned</p>
+                                    <p class="text-sm">Permissions are based on user role</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- System Access -->
+                            <div class="mt-4 pt-4 border-t dark:border-gray-700">
+                                <h4 class="font-semibold text-gray-800 dark:text-white mb-2">System Access</h4>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                        <span>Admin Panel Access</span>
+                                        <span class="{% if user_obj.is_staff %}text-green-600{% else %}text-red-600{% endif %}">
+                                            <i class="fas {% if user_obj.is_staff %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                        <span>API Access</span>
+                                        <span class="{% if profile.api_key %}text-green-600{% else %}text-red-600{% endif %}">
+                                            <i class="fas {% if profile.api_key %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Tab -->
+                    <div x-show="activeTab === 'settings'" x-cloak>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 dark:text-white">Notification Preferences</h4>
+                                    <p class="text-sm text-gray-500">Manage how you receive notifications</p>
+                                </div>
+                                <a href="{% url 'users:update_profile' %}" class="text-blue-600 hover:text-blue-700">
+                                    <i class="fas fa-cog"></i> Manage
+                                </a>
+                            </div>
+                            
+                            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 dark:text-white">Two-Factor Authentication</h4>
+                                    <p class="text-sm text-gray-500">Add an extra layer of security to your account</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs rounded-full {% if profile.two_factor_enabled %}bg-green-100 text-green-700{% else %}bg-gray-200 text-gray-600{% endif %}">
+                                    {% if profile.two_factor_enabled %}Enabled{% else %}Disabled{% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 dark:text-white">API Key</h4>
+                                    <p class="text-sm text-gray-500">Access the Korata API with your personal key</p>
+                                </div>
+                                <button @click="showApiKey = !showApiKey" class="text-blue-600 hover:text-blue-700">
+                                    <i class="fas fa-key"></i> View
+                                </button>
+                            </div>
+                            
+                            <!-- API Key Modal -->
+                            <div x-show="showApiKey" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                                    <h3 class="text-lg font-semibold mb-4">Your API Key</h3>
+                                    <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mb-4">
+                                        <code class="text-sm break-all">{{ profile.api_key|default:"No API key generated" }}</code>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button @click="copyToClipboard('{{ profile.api_key }}')" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">Copy</button>
+                                        <button @click="showApiKey = false" class="flex-1 border border-gray-300 py-2 rounded-lg">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    if (text && text !== 'None') {
+        navigator.clipboard.writeText(text);
+        alert('✓ Copied to clipboard!');
+    } else {
+        alert('No content to copy');
+    }
+}
+
+function hideCredentials() {
+    const credentialsDiv = document.querySelector('.bg-gradient-to-r.from-yellow-50');
+    if (credentialsDiv) {
+        credentialsDiv.style.display = 'none';
+    }
+}
+
+function userDetail() {
+    return {
+        activeTab: 'info',
+        showApiKey: false,
+        isOnline: {{ user_obj.is_online|default:'false'|lower }},
+        
+        init() {
+            // Check if user is online (update every minute)
+            setInterval(() => {
+                fetch(`/api/users/{{ user_obj.id }}/status/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        this.isOnline = data.is_online;
+                    })
+                    .catch(err => console.error('Error fetching status:', err));
+            }, 60000);
+        },
+        
+        getRoleIcon() {
+            const icons = {
+                'ceo': 'fas fa-crown',
+                'admin': 'fas fa-user-shield',
+                'collateral_officer': 'fas fa-gem',
+                'accountant': 'fas fa-calculator',
+                'auditor': 'fas fa-clipboard-list'
+            };
+            return icons['{{ user_obj.role }}'] || 'fas fa-user';
+        }
+    }
+}
+</script>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

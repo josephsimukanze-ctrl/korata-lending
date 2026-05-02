@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Korata Lending System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #2563eb 100%);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .header p {
+            color: #dbeafe;
+            margin: 10px 0 0;
+            font-size: 16px;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .logo span {
+            font-size: 30px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 24px;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .credentials {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border: 1px solid #bae6fd;
+        }
+        .credential-item {
+            margin: 12px 0;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .credential-label {
+            font-weight: 700;
+            color: #1e3a8a;
+        }
+        .credential-value {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 6px;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 14px 35px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 25px;
+            font-size: 12px;
+            color: #64748b;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+        .social-links {
+            margin: 15px 0;
+        }
+        .social-links a {
+            color: #3b82f6;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .credential-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <span>💰</span>
+            </div>
+            <h1>Welcome to Korata</h1>
+            <p>Smart Collateral-Based Lending Platform</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hello {{ user.first_name|default:user.username }}! 👋
+            </div>
+            
+            <p>Thank you for joining <strong>Korata Lending System</strong>. Your account has been created successfully. Below are your login credentials:</p>
+            
+            <div class="credentials">
+                <div class="credential-item">
+                    <span class="credential-label">📧 Username:</span>
+                    <span class="credential-value">{{ user.username }}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">🔑 Password:</span>
+                    <span class="credential-value">{{ password }}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">👤 Role:</span>
+                    <span class="credential-value">{{ user.get_role_display }}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">📧 Email:</span>
+                    <span class="credential-value">{{ user.email }}</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">📱 Phone:</span>
+                    <span class="credential-value">{{ user.phone_number|default:"Not provided" }}</span>
+                </div>
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Important Security Notice:</strong><br>
+                • Change your password immediately after first login<br>
+                • Never share your credentials with anyone<br>
+                • Enable two-factor authentication for added security<br>
+                • Keep your recovery email and phone number updated
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ login_url }}" class="button">🔐 Login to Dashboard</a>
+            </div>
+            
+            <div class="info-box">
+                <strong>💡 Quick Tips to Get Started:</strong><br>
+                • Complete your profile information<br>
+                • Set up security questions for password recovery<br>
+                • Add your KYC documents for verification<br>
+                • Explore loan products and eligibility<br>
+                • Register collateral for faster loan approval
+            </div>
+            
+            <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e8f0;">
+            
+            <h3 style="color: #1e3a8a;">Need Help?</h3>
+            <p>Our support team is available 24/7 to assist you:</p>
+            <ul style="color: #475569;">
+                <li>📞 <strong>Phone:</strong> <a href="tel:{{ support_phone }}" style="color: #3b82f6;">{{ support_phone }}</a></li>
+                <li>📧 <strong>Email:</strong> <a href="mailto:{{ support_email }}" style="color: #3b82f6;">{{ support_email }}</a></li>
+                <li>💬 <strong>Live Chat:</strong> Available on our website</li>
+                <li>📱 <strong>SMS Support:</strong> Text HELP to {{ support_sms_number }}</li>
+            </ul>
+            
+            <div class="footer">
+                <div class="social-links">
+                    <a href="#">Facebook</a> |
+                    <a href="#">Twitter</a> |
+                    <a href="#">LinkedIn</a> |
+                    <a href="#">Instagram</a>
+                </div>
+                <p>This is an automated message from Korata Lending System.</p>
+                <p>Please do not reply to this email. For assistance, contact our support team.</p>
+                <p><strong>Korata Lending System</strong><br>
+                Smart Loans, Better Future</p>
+                <p>&copy; 2025 Korata Lending System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

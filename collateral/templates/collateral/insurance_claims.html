@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Insurance Claims{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Insurance Claims</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Manage and track insurance claims</p>
+        </div>
+        <a href="{% url 'collateral:insurance_create' %}?claim=true" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center space-x-2">
+            <i class="fas fa-plus"></i>
+            <span>New Claim</span>
+        </a>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Claims</p>
+                    <p class="text-2xl font-bold text-gray-800 dark:text-white">0</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-file-alt text-blue-600 dark:text-blue-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Pending</p>
+                    <p class="text-2xl font-bold text-yellow-600">0</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 dark:text-yellow-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Approved</p>
+                    <p class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Paid</p>
+                    <p class="text-2xl font-bold text-purple-600">ZMW 0</p>
+                </div>
+                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-purple-600 dark:text-purple-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Claims Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Claim #</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Collateral</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Claimed Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Incident Date</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-file-alt text-4xl mb-2 block"></i>
+                            <p>No claims found</p>
+                            <a href="{% url 'collateral:insurance_create' %}?claim=true" class="mt-2 inline-block text-blue-600">Create your first claim</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Recently Processed -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Recently Processed Claims</h3>
+        <div class="text-center py-8 text-gray-500">
+            <p>No recent claims to display</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

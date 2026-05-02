@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Auction {{ auction.auction_id }} - Details{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'auction:list' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Auctions
+        </a>
+    </div>
+    
+    <!-- Auction Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ auction.auction_id }}</h2>
+                    <p class="text-blue-100 mt-1">{{ auction.title }}</p>
+                </div>
+                <div>
+                    <span class="px-3 py-1 rounded-full text-sm font-semibold
+                        {% if auction.status == 'active' %}bg-green-500
+                        {% elif auction.status == 'scheduled' %}bg-blue-500
+                        {% elif auction.status == 'completed' %}bg-purple-500
+                        {% elif auction.status == 'pending' %}bg-yellow-500
+                        {% else %}bg-gray-500{% endif %} text-white">
+                        {{ auction.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auction Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
+            <div class="text-center">
+                <p class="text-gray-500 text-sm">Starting Bid</p>
+                <p class="text-xl font-bold">ZMW {{ auction.starting_bid|floatformat:2 }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-500 text-sm">Current Bid</p>
+                <p class="text-xl font-bold text-green-600">ZMW {{ auction.current_bid|floatformat:2 }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-500 text-sm">Bid Increment</p>
+                <p class="text-xl font-bold">ZMW {{ auction.bid_increment|floatformat:2 }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-gray-500 text-sm">Scheduled Date</p>
+                <p class="text-sm font-semibold">{{ auction.scheduled_date|date:"Y-m-d H:i" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Auction Details -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold mb-4">Auction Details</h3>
+            <div class="space-y-3">
+                <div><span class="text-gray-500">Client:</span> {{ auction.client.full_name }}</div>
+                <div><span class="text-gray-500">Loan ID:</span> {{ auction.loan.loan_id }}</div>
+                <div><span class="text-gray-500">Collateral:</span> {{ auction.collateral.serial_number }}</div>
+                <div><span class="text-gray-500">Loan Balance:</span> ZMW {{ auction.loan_balance_at_auction|floatformat:2 }}</div>
+                {% if auction.reserve_price %}
+                <div><span class="text-gray-500">Reserve Price:</span> ZMW {{ auction.reserve_price|floatformat:2 }}</div>
+                {% endif %}
+                <div><span class="text-gray-500">Description:</span></div>
+                <p class="text-gray-600 mt-1">{{ auction.description|linebreaks }}</p>
+            </div>
+        </div>
+        
+        <!-- Bids Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 dark:bg-gray-700">
+                <h3 class="text-lg font-semibold">Recent Bids</h3>
+            </div>
+            <div class="max-h-96 overflow-y-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-sm">Bidder</th>
+                            <th class="px-4 py-2 text-right text-sm">Amount</th>
+                            <th class="px-4 py-2 text-left text-sm">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        {% for bid in bids %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2 text-sm">{{ bid.bidder_name }}</td>
+                            <td class="px-4 py-2 text-sm text-right font-semibold text-green-600">ZMW {{ bid.amount|floatformat:2 }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-500">{{ bid.bid_time|date:"H:i:s" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-8 text-center text-gray-500">No bids yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex justify-end space-x-3">
+        {% if auction.status == 'pending' %}
+        <a href="{% url 'auction:start' auction.id %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            Approve & Schedule
+        </a>
+        {% endif %}
+        
+        {% if can_start %}
+        <a href="{% url 'auction:start' auction.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Start Auction
+        </a>
+        {% endif %}
+        
+        {% if can_end %}
+        <a href="{% url 'auction:end' auction.id %}" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+            End Auction
+        </a>
+        {% endif %}
+        
+        <a href="{% url 'auction:cancel' auction.id %}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            Cancel Auction
+        </a>
+    </div>
+</div>
+{% endblock %}

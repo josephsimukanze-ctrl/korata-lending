@@ -1,0 +1,703 @@
+<aside x-show="sidebarOpen" 
+       x-transition:enter="transform transition-transform duration-300 ease-out"
+       x-transition:enter-start="-translate-x-full"
+       x-transition:enter-end="translate-x-0"
+       x-transition:leave="transform transition-transform duration-300 ease-in"
+       x-transition:leave-start="translate-x-0"
+       x-transition:leave-end="-translate-x-full"
+       class="fixed lg:relative z-30 w-72 h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-black shadow-2xl overflow-y-auto sidebar-transition">
+    
+    <!-- Sidebar Header -->
+    <div class="flex items-center justify-between p-5 border-b border-gray-700/50">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <i class="fas fa-hand-holding-usd text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-white tracking-tight">Korata</h1>
+                <p class="text-xs text-gray-400">Lending System v2.0</p>
+            </div>
+        </div>
+        <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white lg:hidden transition">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+    
+    <!-- User Info (if authenticated) -->
+    {% if user.is_authenticated %}
+    <div class="p-5 border-b border-gray-700/50">
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" class="w-11 h-11 rounded-full border-2 border-blue-500 object-cover">
+                {% else %}
+                    <div class="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                        {{ user.username|first|upper }}
+                    </div>
+                {% endif %}
+                <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold truncate">{{ user.get_full_name|default:user.username }}</p>
+                <p class="text-gray-400 text-xs">{{ user.get_role_display }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Navigation Menu -->
+    <nav class="flex-1 py-4 px-3 space-y-1">
+        <!-- Main Navigation (Everyone) -->
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Main</p>
+            <a href="/" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-home w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Home</span>
+                <i class="fas fa-arrow-right opacity-0 group-hover:opacity-100 transition text-xs"></i>
+            </a>
+            
+            <a href="/dashboard/" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-chart-line w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Dashboard</span>
+                <span class="text-xs bg-green-600/80 px-1.5 py-0.5 rounded-full">Live</span>
+            </a>
+        </div>
+        
+        <!-- Management Section -->
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Management</p>
+            
+            <!-- Users Management (CEO, Admin only) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+            <a href="{% url 'users:user_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-users w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Users</span>
+                <span class="text-xs bg-blue-600/80 px-1.5 py-0.5 rounded-full" id="userCount">0</span>
+            </a>
+            {% endif %}
+            
+            <!-- Clients Management (CEO, Admin, Loan Officer, Collateral Officer) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'loan_officer' or user.role == 'collateral_officer' %}
+            <a href="{% url 'clients:client_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-user-friends w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Clients</span>
+                <span class="text-xs bg-emerald-600/80 px-1.5 py-0.5 rounded-full" x-text="clientStats.total">0</span>
+            </a>
+            {% endif %}
+            
+            <!-- Loans Management (CEO, Admin, Loan Officer, Accountant) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'loan_officer' or user.role == 'accountant' %}
+            <a href="{% url 'loans:loan_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-file-invoice-dollar w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Loans</span>
+                <span class="text-xs bg-purple-600/80 px-1.5 py-0.5 rounded-full" x-text="loanStats.active">0</span>
+            </a>
+            
+            <a href="{% url 'loans:loan_calculator' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-calculator w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Loan Calculator</span>
+            </a>
+            {% endif %}
+            
+            <!-- Payments Management (CEO, Admin, Accountant only) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'accountant' %}
+            <div class="mt-2">
+                <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Payments</p>
+                
+                <a href="{% url 'payments:payment_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-credit-card w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">All Payments</span>
+                    <span id="paymentCount" class="text-xs bg-blue-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+                </a>
+                
+                <a href="{% url 'payments:payment_create' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-plus-circle w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Record Payment</span>
+                </a>
+                
+                <a href="{% url 'payments:payment_method_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-credit-card w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Payment Methods</span>
+                </a>
+                
+                <a href="{% url 'payments:scheduled_payment_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-calendar-alt w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Scheduled Payments</span>
+                    <span id="scheduledCount" class="text-xs bg-yellow-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+                </a>
+                
+                <a href="{% url 'payments:payment_report' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-chart-pie w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Payment Reports</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <!-- Collateral Management (CEO, Admin, Collateral Officer only) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'collateral_officer' %}
+            <div class="mt-2">
+                <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Collateral</p>
+                
+                <a href="{% url 'collateral:list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-gem w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">All Collateral</span>
+                    <span id="collateralCount" class="text-xs bg-blue-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+                </a>
+                
+                <a href="{% url 'collateral:create' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-plus-circle w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Register Collateral</span>
+                </a>
+                
+                <a href="{% url 'collateral:asset_types' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-tags w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Asset Types</span>
+                </a>
+                
+                <a href="{% url 'collateral:inspections' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-clipboard-list w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Inspections</span>
+                </a>
+                
+                <a href="{% url 'collateral:movements' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-truck w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Movements Log</span>
+                </a>
+                
+                <a href="{% url 'collateral:reports' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-chart-bar w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Collateral Reports</span>
+                </a>
+            </div>
+            {% endif %}
+            
+            <!-- Insurance Management (CEO, Admin, Collateral Officer only) -->
+            {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'collateral_officer' %}
+            <div class="mt-2">
+                <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Insurance</p>
+                
+                <a href="{% url 'collateral:insurance_list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-shield-alt w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">All Policies</span>
+                    <span id="insuranceCount" class="text-xs bg-blue-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+                </a>
+                
+                <a href="{% url 'collateral:insurance_create' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-plus-circle w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">New Policy</span>
+                </a>
+                
+                <a href="{% url 'collateral:insurance_claims' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-file-alt w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Claims</span>
+                </a>
+                
+                <a href="{% url 'collateral:insurance_reports' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                    <i class="fas fa-chart-bar w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                    <span class="flex-1 text-sm">Insurance Reports</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Backup & Restore Section (Admin/CEO only) -->
+        {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Backup & Restore</p>
+            
+            <a href="{% url 'backup:dashboard' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-database w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Backup Dashboard</span>
+                <span class="text-xs bg-blue-600/80 px-1.5 py-0.5 rounded-full">Admin</span>
+            </a>
+            
+            <a href="{% url 'backup:backup_database' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-database w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Backup Database</span>
+            </a>
+            
+            <a href="{% url 'backup:backup_media' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-image w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Backup Media</span>
+            </a>
+            
+            <a href="{% url 'backup:full_backup' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-archive w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Full Backup</span>
+            </a>
+            
+            <a href="{% url 'backup:import_data' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-upload w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Import Data</span>
+            </a>
+            
+            <a href="{% url 'backup:export_data' %}?model=all&format=json" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-download w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Export Data</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- AI Assistant Section (Everyone) -->
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">AI Assistant</p>
+            <a href="{% url 'core:ai_chat' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-robot w-5 text-gray-400 group-hover:text-purple-400 transition"></i>
+                <span class="flex-1 text-sm">AI Lending Assistant</span>
+                <span class="text-xs bg-gradient-to-r from-purple-600 to-pink-600 px-2 py-0.5 rounded-full animate-pulse">✨ New</span>
+            </a>
+        </div>
+        
+        <!-- Auction Section (CEO, Admin only) -->
+        {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Auction</p>
+            <a href="{% url 'auction:list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-gavel w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Auction Management</span>
+                <span id="auctionCount" class="text-xs bg-red-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+            </a>
+            <a href="{% url 'auction:notices' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-file-alt w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Default Notices</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- Notifications Section (Everyone) -->
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Notifications</p>
+            <a href="{% url 'notifications:list' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-bell w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">All Notifications</span>
+                <span id="sidebarUnreadCount" class="text-xs bg-red-500 px-1.5 py-0.5 rounded-full hidden">0</span>
+            </a>
+        </div>
+        
+        <!-- Reports Section (CEO, Admin, Accountant only) -->
+        {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'accountant' %}
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">Reports & Analytics</p>
+            
+            <a href="{% url 'reports:collections' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-chart-line w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Collections Report</span>
+            </a>
+            
+            <a href="{% url 'reports:loans' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-file-invoice w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Loans Report</span>
+            </a>
+            
+            <a href="{% url 'reports:clients' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-users w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Clients Report</span>
+            </a>
+            
+            <a href="{% url 'reports:profit_loss' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-chart-pie w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Profit & Loss</span>
+            </a>
+            
+            <a href="{% url 'reports:collateral' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-gem w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Collateral Report</span>
+            </a>
+            
+            <a href="{% url 'payments:payment_report' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-chart-line w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Payment Analytics</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- Admin Section (Superuser only) -->
+        {% if user.is_superuser %}
+        <div class="mb-4">
+            <p class="text-gray-500 text-xs uppercase tracking-wider px-3 mb-2 font-semibold">System Administration</p>
+            <a href="/admin/" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-cog w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Django Admin</span>
+            </a>
+            <a href="/admin/backup/backuplog/" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-history w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Backup Logs</span>
+            </a>
+            <a href="/admin/payments/" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-credit-card w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Payment Admin</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- User Menu Section (Everyone) -->
+        <div class="pt-4 mt-2 border-t border-gray-700/50">
+            {% if user.is_authenticated %}
+            <a href="{% url 'users:change_password' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-key w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Change Password</span>
+            </a>
+            
+            <a href="{% url 'users:update_profile' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-user-cog w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Profile Settings</span>
+            </a>
+            
+            <a href="{% url 'users:preferences' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-sliders-h w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Preferences</span>
+            </a>
+            
+            <div class="my-2 border-t border-gray-700/50"></div>
+            
+            <a href="{% url 'users:logout' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all group">
+                <i class="fas fa-sign-out-alt w-5"></i>
+                <span class="flex-1 text-sm">Logout</span>
+            </a>
+            {% else %}
+            <a href="{% url 'users:login' %}" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/50 transition-all group">
+                <i class="fas fa-sign-in-alt w-5 text-gray-400 group-hover:text-blue-400 transition"></i>
+                <span class="flex-1 text-sm">Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <!-- Stats Summary (Everyone sees limited stats based on role) -->
+    <div class="p-4 border-t border-gray-700/50 mt-auto">
+        <div class="bg-gray-800/30 dark:bg-gray-800/50 rounded-xl p-3">
+            <p class="text-gray-500 text-xs mb-2 font-semibold">Quick Stats</p>
+            <div class="space-y-2">
+                <!-- Users stats only for CEO/Admin -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Total Users</span>
+                    <span class="font-bold text-blue-400 text-sm" id="totalUsers">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Active Users</span>
+                    <span class="font-bold text-emerald-400 text-sm" id="activeUsers">0</span>
+                </div>
+                {% endif %}
+                
+                <!-- Client stats for most roles -->
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Total Clients</span>
+                    <span class="font-bold text-blue-400 text-sm" x-text="clientStats.total">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Active Clients</span>
+                    <span class="font-bold text-emerald-400 text-sm" x-text="clientStats.active">0</span>
+                </div>
+                
+                <!-- Loan stats for loan-related roles -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'loan_officer' or user.role == 'accountant' %}
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Total Loans</span>
+                    <span class="font-bold text-purple-400 text-sm" x-text="loanStats.total">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Active Loans</span>
+                    <span class="font-bold text-emerald-400 text-sm" x-text="loanStats.active">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Pending Approval</span>
+                    <span class="font-bold text-yellow-400 text-sm" x-text="loanStats.pending">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Defaulted Loans</span>
+                    <span class="font-bold text-red-400 text-sm" x-text="loanStats.defaulted">0</span>
+                </div>
+                {% endif %}
+                
+                <!-- Payment stats for accountant/admin/ceo -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'accountant' %}
+                <div class="border-t border-gray-700/50 pt-2 mt-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 text-xs">Total Payments</span>
+                        <span class="font-bold text-blue-400 text-sm" id="totalPayments">0</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-gray-400 text-xs">Pending Payments</span>
+                        <span class="font-bold text-yellow-400 text-sm" id="pendingPayments">0</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-gray-400 text-xs">Total Amount</span>
+                        <span class="font-bold text-emerald-400 text-sm" id="totalAmount">ZMW 0</span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Insurance stats for collateral officer -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' or user.role == 'collateral_officer' %}
+                <div class="border-t border-gray-700/50 pt-2 mt-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 text-xs">Insured Assets</span>
+                        <span class="font-bold text-blue-400 text-sm" id="insuredCount">0</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-gray-400 text-xs">Active Policies</span>
+                        <span class="font-bold text-green-400 text-sm" id="activePolicies">0</span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Backup stats for admin only -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+                <div class="border-t border-gray-700/50 pt-2 mt-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 text-xs">Total Backups</span>
+                        <span class="font-bold text-purple-400 text-sm" id="totalBackups">0</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-gray-400 text-xs">Latest Backup</span>
+                        <span class="font-bold text-blue-400 text-sm" id="latestBackup">-</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</aside>
+
+<script>
+// Update user stats
+function updateUserStats() {
+    fetch('/api/users/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const totalUsersElem = document.getElementById('totalUsers');
+            const activeUsersElem = document.getElementById('activeUsers');
+            const userCountBadge = document.getElementById('userCount');
+            
+            if (totalUsersElem) {
+                totalUsersElem.textContent = data.total_users || 0;
+            }
+            if (activeUsersElem) {
+                activeUsersElem.textContent = data.active_users || 0;
+            }
+            if (userCountBadge) {
+                const total = data.total_users || 0;
+                userCountBadge.textContent = total > 99 ? '99+' : total;
+                if (total > 0) {
+                    userCountBadge.classList.remove('hidden');
+                } else {
+                    userCountBadge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching user stats:', error));
+}
+
+// Update payment stats
+function updatePaymentStats() {
+    fetch('/payments/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const totalPaymentsElem = document.getElementById('totalPayments');
+            const pendingPaymentsElem = document.getElementById('pendingPayments');
+            const totalAmountElem = document.getElementById('totalAmount');
+            const paymentCountBadge = document.getElementById('paymentCount');
+            const scheduledCountBadge = document.getElementById('scheduledCount');
+            
+            if (totalPaymentsElem) {
+                totalPaymentsElem.textContent = data.total_payments || 0;
+            }
+            if (pendingPaymentsElem) {
+                pendingPaymentsElem.textContent = data.pending_count || 0;
+            }
+            if (totalAmountElem) {
+                totalAmountElem.textContent = `ZMW ${(data.total_amount || 0).toLocaleString()}`;
+            }
+            if (paymentCountBadge) {
+                const pendingCount = data.pending_count || 0;
+                if (pendingCount > 0) {
+                    paymentCountBadge.textContent = pendingCount > 99 ? '99+' : pendingCount;
+                    paymentCountBadge.classList.remove('hidden');
+                } else {
+                    paymentCountBadge.classList.add('hidden');
+                }
+            }
+            
+            if (scheduledCountBadge) {
+                fetch('/payments/api/scheduled/stats/')
+                    .then(response => response.json())
+                    .then(scheduledData => {
+                        const dueCount = scheduledData.due_count || 0;
+                        if (dueCount > 0) {
+                            scheduledCountBadge.textContent = dueCount > 99 ? '99+' : dueCount;
+                            scheduledCountBadge.classList.remove('hidden');
+                        } else {
+                            scheduledCountBadge.classList.add('hidden');
+                        }
+                    })
+                    .catch(error => console.error('Error fetching scheduled stats:', error));
+            }
+        })
+        .catch(error => console.error('Error fetching payment stats:', error));
+}
+
+// Update unread notification count
+function updateUnreadCount() {
+    fetch('/notifications/api/')
+        .then(response => response.json())
+        .then(data => {
+            const count = data.unread_count || 0;
+            const badge = document.getElementById('sidebarUnreadCount');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching unread count:', error));
+}
+
+// Update auction count
+function updateAuctionCount() {
+    fetch('/auction/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const activeCount = data.active || 0;
+            const badge = document.getElementById('auctionCount');
+            if (badge) {
+                if (activeCount > 0) {
+                    badge.textContent = activeCount > 99 ? '99+' : activeCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching auction stats:', error));
+}
+
+// Update collateral count
+function updateCollateralCount() {
+    fetch('/collateral/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const totalCount = data.total || 0;
+            const badge = document.getElementById('collateralCount');
+            if (badge) {
+                if (totalCount > 0) {
+                    badge.textContent = totalCount > 99 ? '99+' : totalCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching collateral stats:', error));
+}
+
+// Update insurance stats
+function updateInsuranceStats() {
+    fetch('/collateral/api/insurance/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const insuredCountElem = document.getElementById('insuredCount');
+            const activePoliciesElem = document.getElementById('activePolicies');
+            const insuranceCountBadge = document.getElementById('insuranceCount');
+            
+            if (insuredCountElem) {
+                insuredCountElem.textContent = data.insured_count || 0;
+            }
+            if (activePoliciesElem) {
+                activePoliciesElem.textContent = data.active_policies || 0;
+            }
+            if (insuranceCountBadge) {
+                const expiringCount = data.expiring_soon || 0;
+                if (expiringCount > 0) {
+                    insuranceCountBadge.textContent = expiringCount > 99 ? '99+' : expiringCount;
+                    insuranceCountBadge.classList.remove('hidden');
+                } else {
+                    insuranceCountBadge.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching insurance stats:', error));
+}
+
+// Update backup stats
+function updateBackupStats() {
+    fetch('/backup/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            const totalBackupsElem = document.getElementById('totalBackups');
+            const latestBackupElem = document.getElementById('latestBackup');
+            
+            if (totalBackupsElem) {
+                totalBackupsElem.textContent = data.total_backups || 0;
+            }
+            if (latestBackupElem && data.latest_backup) {
+                latestBackupElem.textContent = data.latest_backup;
+            } else if (latestBackupElem) {
+                latestBackupElem.textContent = 'None';
+            }
+        })
+        .catch(error => console.error('Error fetching backup stats:', error));
+}
+
+// Update client and loan stats
+function updateStats() {
+    // Fetch client stats
+    fetch('/api/clients/stats/')
+        .then(response => response.json())
+        .then(data => {
+            if (window.Alpine) {
+                const app = document.querySelector('[x-data]').__x;
+                if (app) {
+                    app.$data.clientStats = {
+                        total: data.total || 0,
+                        active: data.active || 0,
+                        pending: data.pending || 0
+                    };
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching client stats:', error));
+    
+    // Fetch loan stats
+    fetch('/api/loans/stats/')
+        .then(response => response.json())
+        .then(data => {
+            if (window.Alpine) {
+                const app = document.querySelector('[x-data]').__x;
+                if (app) {
+                    app.$data.loanStats = {
+                        total: data.total || 0,
+                        active: data.active || 0,
+                        pending: data.pending || 0,
+                        defaulted: data.defaulted || 0
+                    };
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching loan stats:', error));
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateUserStats();
+    updatePaymentStats();
+    updateUnreadCount();
+    updateAuctionCount();
+    updateCollateralCount();
+    updateInsuranceStats();
+    updateBackupStats();
+    updateStats();
+    
+    setInterval(updateUserStats, 30000);
+    setInterval(updatePaymentStats, 30000);
+    setInterval(updateUnreadCount, 30000);
+    setInterval(updateAuctionCount, 30000);
+    setInterval(updateCollateralCount, 30000);
+    setInterval(updateInsuranceStats, 30000);
+    setInterval(updateBackupStats, 30000);
+    setInterval(updateStats, 60000);
+});
+</script>

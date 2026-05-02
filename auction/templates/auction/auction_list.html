@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Auction Management - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Auction Management</h2>
+                <p class="mt-1 opacity-90">Manage collateral auctions and track bidding activity</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-gavel text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Total Auctions</p>
+                    <p class="text-2xl font-bold">{{ stats.total }}</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-gavel text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Pending</p>
+                    <p class="text-2xl font-bold text-yellow-600">{{ stats.pending }}</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Active</p>
+                    <p class="text-2xl font-bold text-green-600">{{ stats.active }}</p>
+                </div>
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-play-circle text-green-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Completed</p>
+                    <p class="text-2xl font-bold text-purple-600">{{ stats.completed }}</p>
+                </div>
+                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm">Recovered</p>
+                    <p class="text-2xl font-bold text-emerald-600">ZMW {{ stats.total_recovered|floatformat:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-emerald-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filter -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <input type="text" name="search" value="{{ search_query }}" 
+                       placeholder="Search by ID, client, or collateral..." 
+                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <select name="status" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div>
+                <select name="sort" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="-scheduled_date">Sort by Date (Newest)</option>
+                    <option value="scheduled_date">Sort by Date (Oldest)</option>
+                    <option value="-current_bid">Sort by Bid (Highest)</option>
+                    <option value="current_bid">Sort by Bid (Lowest)</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Create Auction Button -->
+    <div class="flex justify-end">
+        <a href="{% url 'auction:create' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-2">
+            <i class="fas fa-plus"></i>
+            <span>Create Auction</span>
+        </a>
+    </div>
+    
+    <!-- Auctions Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase">Auction ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase">Client</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase">Collateral</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase">Starting Bid</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase">Current Bid</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase">Date</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    {% for auction in auctions %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-6 py-4 text-sm font-mono">{{ auction.auction_id }}</td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="font-medium">{{ auction.client.full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ auction.client.client_id }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <div>{{ auction.collateral.get_asset_type_display }}</div>
+                            <div class="text-xs text-gray-500">{{ auction.collateral.serial_number }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ auction.starting_bid|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right font-semibold text-green-600">ZMW {{ auction.current_bid|floatformat:2 }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if auction.status == 'active' %}bg-green-100 text-green-700
+                                {% elif auction.status == 'scheduled' %}bg-blue-100 text-blue-700
+                                {% elif auction.status == 'completed' %}bg-purple-100 text-purple-700
+                                {% elif auction.status == 'pending' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ auction.get_status_display }}
+                            </span>
+                            {% if auction.status == 'active' %}
+                            <span class="ml-1 text-xs text-green-600 animate-pulse">● Live</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">{{ auction.scheduled_date|date:"Y-m-d H:i" }}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'auction:detail' auction.id %}" class="text-blue-600 hover:text-blue-800 mx-1" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if auction.status == 'pending' %}
+                            <a href="{% url 'auction:start' auction.id %}" class="text-green-600 hover:text-green-800 mx-1" title="Approve Auction">
+                                <i class="fas fa-check-circle"></i>
+                            </a>
+                            {% endif %}
+                            {% if auction.status == 'scheduled' %}
+                            <a href="{% url 'auction:start' auction.id %}" class="text-blue-600 hover:text-blue-800 mx-1" title="Start Auction">
+                                <i class="fas fa-play-circle"></i>
+                            </a>
+                            {% endif %}
+                            {% if auction.status == 'active' %}
+                            <a href="{% url 'auction:end' auction.id %}" class="text-purple-600 hover:text-purple-800 mx-1" title="End Auction">
+                                <i class="fas fa-stop-circle"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'auction:cancel' auction.id %}" class="text-red-600 hover:text-red-800 mx-1" title="Cancel Auction">
+                                <i class="fas fa-times-circle"></i>
+                            </a>
+                        </td>
+                     </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-gavel text-4xl mb-2 block"></i>
+                            <p>No auctions found</p>
+                            <p class="text-sm mt-2">Create an auction from a defaulted loan to get started</p>
+                            <a href="{% url 'auction:create' %}" class="mt-3 inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                <i class="fas fa-plus mr-2"></i>Create First Auction
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if auctions.has_other_pages %}
+        <div class="px-6 py-4 border-t flex justify-between items-center">
+            <div class="text-sm">Showing page {{ auctions.number }} of {{ auctions.paginator.num_pages }}</div>
+            <div class="flex space-x-2">
+                {% if auctions.has_previous %}
+                <a href="?page={{ auctions.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-3 py-1 border rounded hover:bg-gray-50">Previous</a>
+                {% endif %}
+                {% if auctions.has_next %}
+                <a href="?page={{ auctions.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-3 py-1 border rounded hover:bg-gray-50">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

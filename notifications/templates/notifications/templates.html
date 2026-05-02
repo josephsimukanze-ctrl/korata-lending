@@ -1,0 +1,118 @@
+<!-- templates/notifications/templates.html -->
+{% extends 'base.html' %}
+
+{% block title %}Notification Templates - Korata{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Notification Templates</h1>
+        <button onclick="showCreateModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+            <i class="fas fa-plus mr-2"></i> New Template
+        </button>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for template in templates %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ template.name }}</h3>
+                <p class="text-sm text-gray-500">{{ template.get_notification_type_display }} • {{ template.get_priority_display }}</p>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Title:</strong> {{ template.title }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2"><strong>Message:</strong> {{ template.message|truncatechars:100 }}</p>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2">
+                <button onclick="useTemplate({{ template.id }})" class="text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-copy"></i> Use
+                </button>
+                <button onclick="deleteTemplate({{ template.id }})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 text-gray-500">
+            <i class="fas fa-file-alt text-5xl mb-3 opacity-50"></i>
+            <p>No templates found. Create your first template!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Template Modal -->
+<div id="createModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h2 class="text-xl font-bold mb-4">Create Template</h2>
+            <form method="post" action="{% url 'notifications:templates' %}">
+                {% csrf_token %}
+                <div class="space-y-3">
+                    <input type="text" name="name" placeholder="Template Name" required class="w-full border rounded-lg px-3 py-2">
+                    <input type="text" name="title" placeholder="Title" required class="w-full border rounded-lg px-3 py-2">
+                    <textarea name="message" placeholder="Message" rows="4" required class="w-full border rounded-lg px-3 py-2"></textarea>
+                    <select name="notification_type" class="w-full border rounded-lg px-3 py-2">
+                        <option value="info">Information</option>
+                        <option value="payment">Payment</option>
+                        <option value="loan">Loan</option>
+                        <option value="reminder">Reminder</option>
+                        <option value="alert">Alert</option>
+                    </select>
+                    <select name="priority" class="w-full border rounded-lg px-3 py-2">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 mt-6">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCreateModal() {
+    document.getElementById('createModal').classList.remove('hidden');
+    document.getElementById('createModal').classList.add('flex');
+}
+
+function closeModal() {
+    document.getElementById('createModal').classList.add('hidden');
+    document.getElementById('createModal').classList.remove('flex');
+}
+
+function useTemplate(id) {
+    fetch(`/notifications/api/template/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            window.location.href = `/notifications/create/?title=${encodeURIComponent(data.title)}&message=${encodeURIComponent(data.message)}&type=${data.notification_type}&priority=${data.priority}`;
+        });
+}
+
+function deleteTemplate(id) {
+    if (confirm('Are you sure?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/notifications/templates/${id}/delete/`;
+        form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${getCsrfToken()}">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [key, value] = cookie.trim().split('=');
+        if (key === name) return value;
+    }
+    return '';
+}
+</script>
+{% endblock %}

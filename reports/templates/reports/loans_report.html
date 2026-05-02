@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Loans Report - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Loans Report</h2>
+                <p class="mt-1 opacity-90">Analyze loan portfolio, status, and performance</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-file-invoice-dollar text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="defaulted" {% if status_filter == 'defaulted' %}selected{% endif %}>Defaulted</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Loans</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ total_loans }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-file-invoice-dollar text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Principal</p>
+                    <p class="text-2xl font-bold text-green-600">ZMW {{ total_principal|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Interest</p>
+                    <p class="text-2xl font-bold text-purple-600">ZMW {{ total_interest|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percent text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Avg Loan Size</p>
+                    <p class="text-2xl font-bold text-orange-600">ZMW {{ avg_loan_size|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-line text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Status Distribution Chart -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-pie mr-2 text-blue-500"></i>Loan Status Distribution
+            </h3>
+            <canvas id="statusChart" height="250"></canvas>
+        </div>
+        
+        <!-- Monthly Loan Trends -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-green-500"></i>Monthly Loan Trends
+            </h3>
+            <canvas id="trendsChart" height="250"></canvas>
+        </div>
+    </div>
+    
+    <!-- Loans Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                <i class="fas fa-table mr-2 text-purple-500"></i>Recent Loans
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Loan ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Client</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Principal</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Interest</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Created</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    {% for loan in recent_loans %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-6 py-4 text-sm font-mono">{{ loan.loan_id }}</td>
+                        <td class="px-6 py-4 text-sm">{{ loan.client.full_name }}</td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ loan.principal|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ loan.total_interest|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right font-semibold">ZMW {{ loan.total_payback|floatformat:2 }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if loan.status == 'active' %}bg-green-100 text-green-700
+                                {% elif loan.status == 'pending' %}bg-yellow-100 text-yellow-700
+                                {% elif loan.status == 'completed' %}bg-blue-100 text-blue-700
+                                {% elif loan.status == 'defaulted' %}bg-red-100 text-red-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ loan.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">{{ loan.created_at|date:"Y-m-d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            No loan data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-gray-50 dark:bg-gray-700">
+                    <tr class="border-t dark:border-gray-600">
+                        <td colspan="2" class="px-6 py-3 text-sm font-semibold">Total</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ total_principal|floatformat:2 }}</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ total_interest|floatformat:2 }}</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ total_payback|floatformat:2 }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        const statusLabels = [{% for item in status_breakdown %}'{{ item.status }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const statusCounts = [{% for item in status_breakdown %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusCounts,
+                    backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#6b7280'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.raw / total) * 100).toFixed(1);
+                                return `${context.label}: ${context.raw} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Trends Chart
+    const trendsCtx = document.getElementById('trendsChart');
+    if (trendsCtx) {
+        // Sample data - replace with actual monthly data
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const loanCounts = [12, 19, 15, 25, 22, 30];
+        
+        new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Loans Disbursed',
+                    data: loanCounts,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

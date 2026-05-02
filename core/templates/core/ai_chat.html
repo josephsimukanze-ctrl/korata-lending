@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Assistant - Korata Lending{% endblock %}
+
+{% block content %}
+<div x-data="aiChat()" x-init="init()" class="max-w-4xl mx-auto px-4 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'core:dashboard' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+            <i class="fas fa-robot mr-2 text-blue-500"></i>
+            AI Lending Assistant
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">Ask me anything about loans, payments, or lending policies</p>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Chat Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-robot text-white text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <h2 class="text-white font-semibold">Korata AI Assistant</h2>
+                    <p class="text-blue-100 text-xs">Powered by AI • Ready to help</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Messages Area -->
+        <div id="chatMessages" class="h-96 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900">
+            <!-- Welcome Message -->
+            <div class="flex items-start space-x-2">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-robot text-blue-600 text-sm"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm max-w-md">
+                        <p class="text-gray-800 dark:text-gray-200 text-sm">
+                            Hello! I'm your AI lending assistant. I can help you with:
+                        </p>
+                        <ul class="mt-2 text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                            <li>Understanding loan requirements and interest rates</li>
+                            <li>Checking repayment schedules and due dates</li>
+                            <li>Explaining late payment penalties</li>
+                            <li>Collateral valuation and requirements</li>
+                            <li>KYC and document verification process</li>
+                        </ul>
+                        <p class="mt-2 text-gray-800 dark:text-gray-200 text-sm">
+                            How can I assist you today?
+                        </p>
+                    </div>
+                    <span class="text-xs text-gray-400 mt-1 block">Just now</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Suggestions -->
+        <div class="px-4 py-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <div class="flex flex-wrap gap-2">
+                <button @click="quickQuestion('What are the requirements for a loan?')" 
+                        class="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 transition">
+                    Loan requirements?
+                </button>
+                <button @click="quickQuestion('How is interest calculated?')" 
+                        class="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full hover:bg-blue-100 transition dark:hover:bg-blue-900">
+                    Interest calculation?
+                </button>
+                <button @click="quickQuestion('What happens if I miss a payment?')" 
+                        class="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full hover:bg-blue-100 transition dark:hover:bg-blue-900">
+                    Late payment penalty?
+                </button>
+                <button @click="quickQuestion('How does collateral work?')" 
+                        class="text-xs bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-full hover:bg-blue-100 transition dark:hover:bg-blue-900">
+                    Collateral info?
+                </button>
+            </div>
+        </div>
+        
+        <!-- Input Area -->
+        <div class="p-4 border-t dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div class="flex space-x-2">
+                <input type="text" x-model="userMessage" @keyup.enter="sendMessage()"
+                       placeholder="Type your question here..."
+                       class="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-all">
+                <button @click="sendMessage()" :disabled="sending"
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50">
+                    <i class="fas fa-paper-plane" :class="{'animate-spin': sending}"></i>
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 text-center">
+                <i class="fas fa-shield-alt mr-1"></i>
+                AI responses are generated and may not be 100% accurate. Always verify with official documentation.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Typing indicator animation */
+    .typing-dot {
+        animation: typingBounce 1.4s infinite ease-in-out both;
+    }
+    
+    @keyframes typingBounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+</style>
+
+<script>
+function aiChat() {
+    return {
+        userMessage: '',
+        sending: false,
+        conversationHistory: [],
+        
+        init() {
+            // Load conversation from localStorage
+            const saved = localStorage.getItem('chat_history');
+            if (saved) {
+                try {
+                    const messages = JSON.parse(saved);
+                    messages.forEach(msg => {
+                        if (msg.text && !msg.text.includes('Hello! I\'m your AI lending assistant')) {
+                            this.addMessageToUI(msg.text, msg.isUser);
+                        }
+                    });
+                } catch(e) {
+                    console.error('Error loading chat history:', e);
+                }
+            }
+        },
+        
+        async sendMessage() {
+            if (!this.userMessage.trim() || this.sending) return;
+            
+            const message = this.userMessage.trim();
+            this.addMessageToUI(message, true);
+            this.userMessage = '';
+            this.sending = true;
+            
+            // Show typing indicator
+            this.showTypingIndicator();
+            
+            try {
+                const response = await fetch('/ai-chat-api/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: this.conversationHistory
+                    })
+                });
+                
+                // Remove typing indicator
+                this.removeTypingIndicator();
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.addMessageToUI(data.response, false);
+                        
+                        // Update conversation history
+                        this.conversationHistory.push(
+                            {role: "user", content: message},
+                            {role: "assistant", content: data.response}
+                        );
+                        
+                        // Keep only last 10 exchanges
+                        if (this.conversationHistory.length > 20) {
+                            this.conversationHistory = this.conversationHistory.slice(-20);
+                        }
+                        
+                        // Save to localStorage
+                        this.saveConversation();
+                    } else {
+                        this.addMessageToUI("Sorry, I'm having trouble responding. Please try again.", false);
+                    }
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error response:', errorData);
+                    this.addMessageToUI(errorData.response || "I'm having trouble connecting. Please try again.", false);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.removeTypingIndicator();
+                this.addMessageToUI("Network error. Please check your connection and try again.", false);
+            } finally {
+                this.sending = false;
+            }
+        },
+        
+        showTypingIndicator() {
+            const container = document.getElementById('chatMessages');
+            const indicatorDiv = document.createElement('div');
+            indicatorDiv.id = 'typingIndicator';
+            indicatorDiv.className = 'flex items-start space-x-2';
+            indicatorDiv.innerHTML = `
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-robot text-blue-600 text-sm"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot" style="animation-delay: 0s"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot" style="animation-delay: 0.2s"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(indicatorDiv);
+            container.scrollTop = container.scrollHeight;
+        },
+        
+        removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        },
+        
+        addMessageToUI(text, isUser) {
+            const container = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start space-x-2 ${isUser ? 'justify-end' : ''}`;
+            
+            if (isUser) {
+                messageDiv.innerHTML = `
+                    <div class="flex-1 text-right">
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-3 inline-block max-w-md text-left">
+                            <p class="text-sm whitespace-pre-wrap">${this.escapeHtml(text)}</p>
+                        </div>
+                        <span class="text-xs text-gray-400 mt-1 block">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-blue-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm max-w-md">
+                            <p class="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-wrap">${this.escapeHtml(text)}</p>
+                        </div>
+                        <span class="text-xs text-gray-400 mt-1 block">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                `;
+            }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        },
+        
+        quickQuestion(question) {
+            this.userMessage = question;
+            this.sendMessage();
+        },
+        
+        saveConversation() {
+            const messages = [];
+            const messageDivs = document.querySelectorAll('#chatMessages .flex');
+            messageDivs.forEach(div => {
+                const isUser = div.querySelector('.bg-gradient-to-r') !== null;
+                const textElement = div.querySelector('p');
+                if (textElement && textElement.innerText && 
+                    !textElement.innerText.includes('Hello! I\'m your AI lending assistant') &&
+                    textElement.innerText !== 'Hello! I\'m your AI lending assistant. I can help you with:') {
+                    messages.push({
+                        text: textElement.innerText,
+                        isUser: isUser
+                    });
+                }
+            });
+            // Keep only last 20 messages
+            const recentMessages = messages.slice(-20);
+            localStorage.setItem('chat_history', JSON.stringify(recentMessages));
+        },
+        
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+        
+        getCsrfToken() {
+            const name = 'csrftoken';
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const trimmedCookie = cookie.trim();
+                if (trimmedCookie.startsWith(name + '=')) {
+                    return decodeURIComponent(trimmedCookie.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+    }
+}
+</script>
+{% endblock %}

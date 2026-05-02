@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if movement %}Edit{% else %}Record{% endif %} Movement{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:movements' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Movements
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <h2 class="text-xl font-bold text-white">
+                {% if movement %}Edit Movement{% else %}Record New Movement{% endif %}
+            </h2>
+            <p class="text-blue-100 mt-1">Track collateral location changes and transfers</p>
+        </div>
+        
+        <form method="post" class="p-6">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <!-- Collateral -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Collateral <span class="text-red-500">*</span>
+                    </label>
+                    <select name="collateral" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">Select Collateral</option>
+                        {% for collateral in collaterals %}
+                        <option value="{{ collateral.id }}" {% if movement and movement.collateral.id == collateral.id %}selected{% endif %}>
+                            {{ collateral.title }} ({{ collateral.collateral_id }}) - {{ collateral.storage_location }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Movement Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Movement Type <span class="text-red-500">*</span>
+                    </label>
+                    <select name="movement_type" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="received" {% if movement and movement.movement_type == 'received' %}selected{% endif %}>📥 Received</option>
+                        <option value="moved" {% if movement and movement.movement_type == 'moved' %}selected{% endif %}>🚚 Moved</option>
+                        <option value="released" {% if movement and movement.movement_type == 'released' %}selected{% endif %}>📤 Released</option>
+                        <option value="seized" {% if movement and movement.movement_type == 'seized' %}selected{% endif %}>🔒 Seized</option>
+                        <option value="sold" {% if movement and movement.movement_type == 'sold' %}selected{% endif %}>💸 Sold</option>
+                        <option value="transferred" {% if movement and movement.movement_type == 'transferred' %}selected{% endif %}>🔄 Transferred</option>
+                    </select>
+                </div>
+                
+                <!-- From Location -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        From Location
+                    </label>
+                    <input type="text" name="from_location" 
+                           value="{{ movement.from_location|default:'' }}"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="Current location before movement">
+                </div>
+                
+                <!-- To Location -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        To Location <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="to_location" required
+                           value="{{ movement.to_location|default:'' }}"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="New location after movement">
+                </div>
+                
+                <!-- Reason -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Reason for Movement <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="reason" rows="3" required
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="Why is this collateral being moved?">{{ movement.reason|default:'' }}</textarea>
+                </div>
+                
+                <!-- Additional Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Additional Notes
+                    </label>
+                    <textarea name="notes" rows="2"
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="Any additional information...">{{ movement.notes|default:'' }}</textarea>
+                </div>
+                
+                <!-- Authorized By (for admin users) -->
+                {% if user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Authorize Immediately
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="authorize" value="true" 
+                               {% if movement and movement.authorized_by %}checked{% endif %}
+                               class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                        <span class="text-gray-700 dark:text-gray-300">Authorize this movement</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1">Authorized movements are considered approved</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                <a href="{% url 'collateral:movements' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i>{% if movement %}Update{% else %}Record{% endif %} Movement
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

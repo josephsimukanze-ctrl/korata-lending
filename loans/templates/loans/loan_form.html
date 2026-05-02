@@ -1,0 +1,517 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Loans{% endblock %}
+
+{% block content %}
+<div x-data="loanForm()" x-init="initForm()" class="max-w-4xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'loans:loan_list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Loans
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">{{ title }}</h2>
+                    <p class="text-blue-100 mt-1">Fill in the loan application details</p>
+                </div>
+                {% if loan %}
+                <div class="bg-white/20 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm">{{ loan.loan_id }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <form method="post" class="p-6" @submit="validateForm">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Client Selection -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Client <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select name="client_id" x-model="clientId" @change="updateClientInfo()" required
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="">-- Select Client --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" data-name="{{ client.full_name }}" data-id="{{ client.client_id }}" data-phone="{{ client.phone_number }}" data-email="{{ client.email|default:'' }}">
+                                {{ client.full_name }} ({{ client.client_id }}) - {{ client.phone_number }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Client Info Card -->
+                    <div x-show="selectedClient" x-transition.duration.300ms 
+                         class="mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-user-circle text-blue-600 dark:text-blue-400 text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300">Selected Client</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Name:</span>
+                                        <span class="font-medium text-gray-800 dark:text-white ml-2" x-text="selectedClient.name"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Client ID:</span>
+                                        <span class="font-mono text-sm text-gray-800 dark:text-white ml-2" x-text="selectedClient.id"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Phone:</span>
+                                        <span class="text-gray-800 dark:text-white ml-2" x-text="selectedClient.phone"></span>
+                                    </div>
+                                    <div x-show="selectedClient.email">
+                                        <span class="text-gray-600 dark:text-gray-400">Email:</span>
+                                        <span class="text-gray-800 dark:text-white ml-2" x-text="selectedClient.email"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" @click="clearClient()" class="text-gray-400 hover:text-red-500 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- No clients message -->
+                    {% if not clients %}
+                    <div class="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                            <div>
+                                <p class="text-sm text-yellow-800 dark:text-yellow-300">No clients found in the system.</p>
+                                <a href="{% url 'clients:client_create' %}" class="text-sm text-blue-600 hover:text-blue-700 mt-1 inline-block">
+                                    <i class="fas fa-plus-circle mr-1"></i> Register a client first
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Collateral Selection -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Collateral (Optional)
+                    </label>
+                    <div class="relative">
+                        <select name="collateral_id" x-model="collateralId" @change="updateCollateralInfo()"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="">-- Select Collateral --</option>
+                            {% if collaterals %}
+                                {% for collateral in collaterals %}
+                                <option value="{{ collateral.id }}" 
+                                        data-type="{{ collateral.get_asset_type_display }}"
+                                        data-value="{{ collateral.estimated_value }}"
+                                        data-condition="{{ collateral.get_condition_display }}"
+                                        data-serial="{{ collateral.serial_number }}"
+                                        data-location="{{ collateral.storage_location }}"
+                                        data-title="{{ collateral.title|default:'' }}">
+                                    [{{ collateral.id }}] {{ collateral.get_asset_type_display }} - {{ collateral.serial_number }} (ZMW {{ collateral.estimated_value|floatformat:0 }})
+                                </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>No collateral available</option>
+                            {% endif %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Collateral Count Badge -->
+                    {% if collaterals %}
+                    <div class="mt-2 flex justify-between items-center">
+                        <span class="text-xs text-green-600 dark:text-green-400">
+                            <i class="fas fa-check-circle mr-1"></i> {{ collaterals|length }} collateral item(s) available
+                        </span>
+                        <a href="{% url 'collateral:list' %}" class="text-xs text-blue-600 hover:text-blue-700" target="_blank">
+                            <i class="fas fa-external-link-alt mr-1"></i> Manage Collateral
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- No collateral message -->
+                    {% if not collaterals %}
+                    <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                            <span>No collateral available. You can still apply for a loan without collateral.</span>
+                        </div>
+                        <a href="{% url 'collateral:create' %}" class="text-sm text-blue-600 hover:text-blue-700 mt-2 inline-block">
+                            <i class="fas fa-plus-circle mr-1"></i> Register Collateral
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Collateral Info Card -->
+                    <div x-show="selectedCollateral" x-transition.duration.300ms 
+                         class="mt-3 p-4 bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-gem text-green-600 dark:text-green-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-green-800 dark:text-green-300">Selected Collateral</h4>
+                                <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div class="col-span-2" x-show="selectedCollateral.title">
+                                        <span class="text-gray-600 dark:text-gray-400">Title:</span>
+                                        <span class="font-medium text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.title"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Type:</span>
+                                        <span class="font-medium text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.type"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Serial Number:</span>
+                                        <span class="font-mono text-sm text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.serial"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Estimated Value:</span>
+                                        <span class="font-bold text-green-600 dark:text-green-400 ml-2">ZMW <span x-text="formatNumber(selectedCollateral.value)"></span></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Condition:</span>
+                                        <span class="ml-2">
+                                            <span class="px-2 py-0.5 text-xs rounded-full" 
+                                                  :class="selectedCollateral.condition === 'New' ? 'bg-green-100 text-green-700' :
+                                                          selectedCollateral.condition === 'Excellent' ? 'bg-blue-100 text-blue-700' :
+                                                          selectedCollateral.condition === 'Good' ? 'bg-teal-100 text-teal-700' :
+                                                          'bg-yellow-100 text-yellow-700'"
+                                                  x-text="selectedCollateral.condition"></span>
+                                        </span>
+                                    </div>
+                                    <div class="col-span-2" x-show="selectedCollateral.location">
+                                        <span class="text-gray-600 dark:text-gray-400">Storage Location:</span>
+                                        <span class="text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.location"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" @click="clearCollateral()" class="text-gray-400 hover:text-red-500 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Benefit message -->
+                    <div x-show="!selectedCollateral && {{ collaterals|length }} > 0" class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-info-circle text-blue-500"></i>
+                        <span>Adding collateral helps you get:</span>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full">
+                                <i class="fas fa-percent text-green-600 text-xs mr-1"></i>
+                                <span>Lower interest rates</span>
+                            </span>
+                            <span class="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                                <i class="fas fa-check-circle text-blue-600 text-xs mr-1"></i>
+                                <span>Higher loan amounts</span>
+                            </span>
+                            <span class="inline-flex items-center px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                <i class="fas fa-clock text-purple-600 text-xs mr-1"></i>
+                                <span>Faster approval</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Principal Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Principal Amount (ZMW) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">ZMW</span>
+                        <input type="number" name="principal" x-model="principal" @input="calculateLoan()" step="0.01" required
+                               class="w-full pl-12 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Minimum: ZMW 100 | Maximum: ZMW 1,000,000</p>
+                </div>
+                
+                <!-- Interest Rate -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Interest Rate (%) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex space-x-2">
+                        <input type="number" name="interest_rate" x-model="rate" @input="calculateLoan()" step="0.5" required
+                               class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <input type="range" x-model="rate" @input="calculateLoan()" min="0" max="50" step="0.5"
+                               class="w-32">
+                    </div>
+                </div>
+                
+                <!-- Interest Period -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Interest Period
+                    </label>
+                    <div class="flex space-x-2">
+                        <button type="button" @click="periodType = 'week'; calculateLoan()"
+                                :class="periodType === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                class="flex-1 py-2 rounded-lg transition-colors">
+                            Weekly
+                        </button>
+                        <button type="button" @click="periodType = 'month'; calculateLoan()"
+                                :class="periodType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                class="flex-1 py-2 rounded-lg transition-colors">
+                            Monthly
+                        </button>
+                    </div>
+                    <input type="hidden" name="interest_period" :value="periodType">
+                </div>
+                
+                <!-- Duration -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Duration (<span x-text="periodType === 'week' ? 'Weeks' : 'Months'"></span>) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex space-x-2">
+                        <input type="number" name="duration_weeks" x-model="duration" @input="calculateLoan()" required
+                               :min="periodType === 'week' ? 1 : 1"
+                               :max="periodType === 'week' ? 52 : 24"
+                               class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        <input type="range" x-model="duration" @input="calculateLoan()" 
+                               :min="periodType === 'week' ? 1 : 1"
+                               :max="periodType === 'week' ? 52 : 24"
+                               class="w-32">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <span x-text="periodType === 'week' ? duration : duration * 4"></span> total payments
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Loan Calculation Summary -->
+            <div class="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4" x-show="calculated">
+                <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-3">
+                    <i class="fas fa-calculator mr-2 text-blue-500"></i>Loan Summary
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Total Payback</p>
+                        <p class="text-lg font-bold text-blue-600">ZMW <span x-text="formatNumber(totalPayback)">0</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Total Interest</p>
+                        <p class="text-lg font-bold text-purple-600">ZMW <span x-text="formatNumber(totalInterest)">0</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span x-text="periodType === 'week' ? 'Weekly' : 'Monthly'"></span> Payment
+                        </p>
+                        <p class="text-lg font-bold text-green-600">ZMW <span x-text="formatNumber(installment)">0</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Interest Rate</p>
+                        <p class="text-lg font-bold text-orange-600"><span x-text="rate"></span>%</p>
+                    </div>
+                </div>
+                
+                <!-- Collateral benefit indicator -->
+                <div x-show="selectedCollateral" class="mt-3 pt-3 border-t border-blue-200 dark:border-gray-600">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-green-600 dark:text-green-400">
+                            <i class="fas fa-check-circle mr-1"></i> Collateral Applied
+                        </span>
+                        <span class="text-gray-500">
+                            Value: ZMW <span x-text="formatNumber(selectedCollateral.value)"></span>
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                        <i class="fas fa-chart-line mr-1"></i>
+                        Collateral coverage: <span x-text="((selectedCollateral.value / principal) * 100).toFixed(1)"></span>% of loan amount
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loan Purpose -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Loan Purpose
+                </label>
+                <textarea name="purpose" rows="3" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="What is the loan for? (e.g., Business expansion, Education, Medical expenses, etc.)"></textarea>
+            </div>
+            
+            <!-- Additional Notes -->
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Additional Notes
+                </label>
+                <textarea name="notes" rows="2" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Any additional information about the loan application..."></textarea>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                <a href="{% url 'loans:loan_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i>Submit Application
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function loanForm() {
+    return {
+        clientId: '',
+        selectedClient: null,
+        collateralId: '',
+        selectedCollateral: null,
+        principal: {% if loan %}{{ loan.principal }}{% else %}10000{% endif %},
+        rate: {% if loan %}{{ loan.interest_rate }}{% else %}10{% endif %},
+        periodType: '{% if loan %}{{ loan.interest_period }}{% else %}week{% endif %}',
+        duration: {% if loan %}{{ loan.duration_weeks }}{% else %}12{% endif %},
+        totalPayback: 0,
+        totalInterest: 0,
+        installment: 0,
+        calculated: false,
+        
+        initForm() {
+            this.calculateLoan();
+            this.updateClientInfo();
+            this.updateCollateralInfo();
+        },
+        
+        updateClientInfo() {
+            const select = document.querySelector('select[name="client_id"]');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                this.selectedClient = {
+                    id: selectedOption.value,
+                    name: selectedOption.dataset.name,
+                    clientId: selectedOption.dataset.id,
+                    phone: selectedOption.dataset.phone,
+                    email: selectedOption.dataset.email || ''
+                };
+            } else {
+                this.selectedClient = null;
+            }
+        },
+        
+        clearClient() {
+            const select = document.querySelector('select[name="client_id"]');
+            if (select) {
+                select.value = '';
+                this.selectedClient = null;
+            }
+        },
+        
+        updateCollateralInfo() {
+            const select = document.querySelector('select[name="collateral_id"]');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                this.selectedCollateral = {
+                    id: selectedOption.value,
+                    type: selectedOption.dataset.type,
+                    value: parseFloat(selectedOption.dataset.value) || 0,
+                    condition: selectedOption.dataset.condition,
+                    serial: selectedOption.dataset.serial,
+                    location: selectedOption.dataset.location || '',
+                    title: selectedOption.dataset.title || ''
+                };
+                this.calculateLoan();
+            } else {
+                this.selectedCollateral = null;
+                this.calculateLoan();
+            }
+        },
+        
+        clearCollateral() {
+            const select = document.querySelector('select[name="collateral_id"]');
+            if (select) {
+                select.value = '';
+                this.selectedCollateral = null;
+                this.calculateLoan();
+            }
+        },
+        
+        calculateLoan() {
+            let principal = parseFloat(this.principal) || 0;
+            let rate = parseFloat(this.rate) || 0;
+            let duration = parseInt(this.duration) || 0;
+            
+            if (principal <= 0 || rate <= 0 || duration <= 0) {
+                this.calculated = false;
+                return;
+            }
+            
+            let totalInterest, totalPayback, installment;
+            
+            if (this.periodType === 'week') {
+                totalInterest = principal * (rate / 100) * duration;
+                totalPayback = principal + totalInterest;
+                installment = totalPayback / duration;
+            } else {
+                let months = duration;
+                totalInterest = principal * (rate / 100) * months;
+                totalPayback = principal + totalInterest;
+                installment = totalPayback / months;
+            }
+            
+            this.totalInterest = totalInterest;
+            this.totalPayback = totalPayback;
+            this.installment = installment;
+            this.calculated = true;
+        },
+        
+        formatNumber(num) {
+            if (!num || isNaN(num)) return '0.00';
+            return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        },
+        
+        validateForm(event) {
+            const clientSelect = document.querySelector('select[name="client_id"]');
+            if (!clientSelect || !clientSelect.value) {
+                event.preventDefault();
+                alert('Please select a client');
+                return false;
+            }
+            
+            const principal = parseFloat(this.principal);
+            if (principal <= 0) {
+                event.preventDefault();
+                alert('Please enter a valid principal amount');
+                return false;
+            }
+            
+            if (principal < 100) {
+                event.preventDefault();
+                alert('Principal amount must be at least ZMW 100');
+                return false;
+            }
+            
+            if (this.rate <= 0) {
+                event.preventDefault();
+                alert('Please enter a valid interest rate');
+                return false;
+            }
+            
+            if (this.duration <= 0) {
+                event.preventDefault();
+                alert('Please enter a valid duration');
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+</script>
+{% endblock %}

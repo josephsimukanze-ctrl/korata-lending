@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Make Payment - Loan {{ loan.loan_id }}{% endblock %}
+
+{% block content %}
+<div x-data="paymentForm()" x-init="init()" class="max-w-2xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'loans:loan_detail' loan.id %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Loan Details
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-green-500 to-teal-600 px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Make Payment</h2>
+                    <p class="text-green-100 mt-1">Loan: {{ loan.loan_id }} - {{ loan.client.full_name }}</p>
+                </div>
+                <div class="bg-white/20 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm">{{ loan.get_status_display }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <!-- Loan Summary Cards -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Total Payback</p>
+                    <p class="text-xl font-bold text-gray-800 dark:text-white">ZMW {{ loan.total_payback|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Amount Paid</p>
+                    <p class="text-xl font-bold text-green-600">ZMW {{ amount_paid|floatformat:2 }}</p>
+                </div>
+                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Remaining Balance</p>
+                    <p class="text-xl font-bold text-red-600">ZMW {{ remaining_balance|floatformat:2 }}</p>
+                </div>
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Next Due</p>
+                    <p class="text-sm font-semibold">
+                        {% if next_schedule %}
+                            {{ next_schedule.due_date|date:"M d, Y" }}
+                            <span class="text-xs text-gray-500 block">Week {{ next_schedule.week_number }}</span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Suggested Payment -->
+            <div class="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg p-4 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Suggested Payment</p>
+                        <p class="text-2xl font-bold text-green-600">ZMW {{ suggested_amount|floatformat:2 }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Next payment amount (Week {{ next_schedule.week_number|default:"1" }})</p>
+                    </div>
+                    <button type="button" @click="setSuggestedAmount()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                        Use Suggested
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Payment Breakdown (Upcoming Payments) -->
+            <div class="mb-6" x-show="upcomingPayments.length > 0">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    <i class="fas fa-calendar-alt mr-2 text-green-500"></i>Upcoming Payments
+                </h3>
+                <div class="space-y-2 max-h-48 overflow-y-auto">
+                    <template x-for="payment in upcomingPayments" :key="payment.week">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <span class="font-medium">Week {{ payment.week }}</span>
+                                <span class="text-xs text-gray-500 ml-2">Due: {{ payment.due_date }}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-green-600">ZMW {{ payment.amount }}</span>
+                                <button type="button" @click="setAmount(payment.amount)" class="ml-2 text-xs text-blue-600 hover:text-blue-800">
+                                    Use
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <form method="post" @submit="validateForm">
+                {% csrf_token %}
+                
+                <div class="space-y-4">
+                    <!-- Payment Amount -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Payment Amount (ZMW) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">ZMW</span>
+                            <input type="number" 
+                                   x-model="amount" 
+                                   name="amount" 
+                                   step="0.01" 
+                                   required
+                                   :class="{'border-red-500': amountError}"
+                                   class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Enter amount">
+                        </div>
+                        <p x-show="amountError" class="text-red-500 text-xs mt-1" x-text="amountError"></p>
+                        <p class="text-xs text-gray-500 mt-1">Minimum payment: ZMW {{ min_amount|floatformat:2 }}</p>
+                    </div>
+                    
+                    <!-- Payment Method -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Payment Method <span class="text-red-500">*</span>
+                        </label>
+                        <select name="payment_method" x-model="paymentMethod" required
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Select Payment Method</option>
+                            {% for method in payment_methods %}
+                            <option value="{{ method.id }}">{{ method.get_method_type_display }} - {{ method.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Reference Number -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Reference Number (Optional)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                <i class="fas fa-hashtag"></i>
+                            </span>
+                            <input type="text" 
+                                   name="reference_number" 
+                                   x-model="referenceNumber"
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Transaction reference number">
+                        </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Notes (Optional)
+                        </label>
+                        <textarea name="notes" 
+                                  x-model="notes"
+                                  rows="3" 
+                                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                                  placeholder="Any notes about this payment (e.g., payment for weeks 1-3)"></textarea>
+                    </div>
+                    
+                    <!-- Payment Summary -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4" x-show="amount > 0">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Payment Summary</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Payment Amount:</span>
+                                <span class="font-semibold text-green-600">ZMW <span x-text="formatNumber(amount)">0</span></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Remaining After Payment:</span>
+                                <span class="font-semibold" :class="remainingAfterPayment <= 0 ? 'text-green-600' : 'text-red-600'">
+                                    ZMW <span x-text="formatNumber(remainingAfterPayment)">0</span>
+                                </span>
+                            </div>
+                            <div class="flex justify-between" x-show="remainingAfterPayment <= 0">
+                                <span class="text-gray-600">Loan Status:</span>
+                                <span class="font-semibold text-green-600">Will be completed!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                    <a href="{% url 'loans:loan_detail' loan.id %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            :disabled="!isValid"
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-credit-card mr-2"></i>Process Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function paymentForm() {
+    return {
+        amount: {{ suggested_amount }},
+        paymentMethod: '',
+        referenceNumber: '',
+        notes: '',
+        amountError: '',
+        upcomingPayments: [],
+        remainingBalance: {{ remaining_balance }},
+        minAmount: {{ min_amount }},
+        
+        init() {
+            this.fetchUpcomingPayments();
+        },
+        
+        fetchUpcomingPayments() {
+            fetch(`/payments/api/loan/{{ loan.id }}/upcoming/`)
+                .then(response => response.json())
+                .then(data => {
+                    this.upcomingPayments = data.payments;
+                })
+                .catch(error => console.error('Error fetching upcoming payments:', error));
+        },
+        
+        setSuggestedAmount() {
+            this.amount = {{ suggested_amount }};
+            this.validateAmount();
+        },
+        
+        setAmount(value) {
+            this.amount = value;
+            this.validateAmount();
+        },
+        
+        validateAmount() {
+            const minAmount = this.minAmount;
+            const maxAmount = this.remainingBalance;
+            
+            if (this.amount <= 0) {
+                this.amountError = 'Please enter a valid amount';
+                return false;
+            } else if (this.amount < minAmount && this.amount < maxAmount) {
+                this.amountError = `Minimum payment amount is ZMW ${minAmount.toFixed(2)}`;
+                return false;
+            } else if (this.amount > maxAmount) {
+                this.amountError = `Amount cannot exceed remaining balance of ZMW ${maxAmount.toFixed(2)}`;
+                return false;
+            } else {
+                this.amountError = '';
+                return true;
+            }
+        },
+        
+        get remainingAfterPayment() {
+            return this.remainingBalance - this.amount;
+        },
+        
+        get isValid() {
+            return this.amount > 0 && !this.amountError && this.amount <= this.remainingBalance && this.paymentMethod;
+        },
+        
+        validateForm(event) {
+            if (!this.isValid) {
+                event.preventDefault();
+                if (!this.paymentMethod) {
+                    alert('Please select a payment method');
+                } else if (!this.amountError) {
+                    alert('Please enter a valid payment amount');
+                } else {
+                    alert(this.amountError);
+                }
+                return false;
+            }
+            return true;
+        },
+        
+        formatNumber(num) {
+            if (!num || isNaN(num)) return '0.00';
+            return parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+    }
+}
+</script>
+{% endblock %}

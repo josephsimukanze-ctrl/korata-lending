@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile - {{ user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div x-data="profileForm()" x-init="initForm()" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'users:profile' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Profile
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Edit Profile</h2>
+                    <p class="text-green-100 mt-1 flex items-center">
+                        <i class="fas fa-user-edit mr-2 text-sm"></i>
+                        Update your personal information
+                    </p>
+                </div>
+                <div class="hidden md:block">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-user-circle text-white text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-8" id="profileForm">
+            {% csrf_token %}
+            
+            <!-- Profile Picture Section -->
+            <div class="flex justify-center mb-8">
+                <div class="relative group">
+                    <div class="w-36 h-36 rounded-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center border-4 border-white dark:border-gray-700 shadow-xl transition-all duration-300 group-hover:shadow-2xl">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-full h-full object-cover" id="profilePreview">
+                        {% else %}
+                            <i class="fas fa-user text-6xl text-gray-400" id="profilePreviewIcon"></i>
+                            <img src="" alt="Profile" class="w-full h-full object-cover hidden" id="profilePreview">
+                        {% endif %}
+                    </div>
+                    <label for="id_profile_picture" class="absolute bottom-0 right-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full p-2.5 cursor-pointer hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-lg transform hover:scale-105">
+                        <i class="fas fa-camera text-white text-sm"></i>
+                    </label>
+                    {{ form.profile_picture }}
+                    <p class="text-xs text-gray-500 text-center mt-3">Click camera icon to change photo</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- First Name -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-2 text-green-500"></i>First Name <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="first_name" id="id_first_name" value="{{ user.first_name }}" required
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                </div>
+                
+                <!-- Last Name -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-2 text-green-500"></i>Last Name <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="last_name" id="id_last_name" value="{{ user.last_name }}" required
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                </div>
+                
+                <!-- Email -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-envelope mr-2 text-green-500"></i>Email <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-envelope text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="email" name="email" id="id_email" value="{{ user.email }}" required
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                </div>
+                
+                <!-- Phone Number -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-phone mr-2 text-green-500"></i>Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-phone text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="tel" name="phone_number" id="id_phone_number" value="{{ user.phone_number|default:'' }}" required
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 flex items-center">
+                        <i class="fas fa-info-circle mr-1"></i>Format: +260XXXXXXXXX
+                    </p>
+                </div>
+                
+                <!-- Bio -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-align-left mr-2 text-green-500"></i>Bio
+                    </label>
+                    <div class="relative">
+                        <textarea name="bio" id="id_bio" rows="3"
+                                  class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200 resize-none"
+                                  placeholder="Tell us a little about yourself...">{{ user.bio|default:'' }}</textarea>
+                    </div>
+                </div>
+                
+                <!-- Address -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-map-marker-alt mr-2 text-green-500"></i>Address
+                    </label>
+                    <div class="relative">
+                        <textarea name="address" id="id_address" rows="2"
+                                  class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200 resize-none"
+                                  placeholder="Your street address">{{ user.address|default:'' }}</textarea>
+                    </div>
+                </div>
+                
+                <!-- City -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-building mr-2 text-green-500"></i>City
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-building text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="city" id="id_city" value="{{ user.city|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                </div>
+                
+                <!-- Country -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-globe mr-2 text-green-500"></i>Country
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-globe text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="country" id="id_country" value="{{ user.country|default:'Zambia' }}"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'users:profile' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-save mr-2"></i>Update Profile
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="border-l-4 border-red-500 p-6 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10">
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-red-600 dark:text-red-400 mb-1">Danger Zone</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Once you change your password, you will be logged out and need to log in again with your new credentials.</p>
+                    <a href="{% url 'users:change_password' %}" class="inline-flex items-center px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
+                        <i class="fas fa-key mr-2"></i> Change Password
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Notification -->
+    <div x-show="showSuccess" x-cloak x-transition.duration.300ms class="fixed bottom-4 right-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center space-x-3 z-50 animate-slide-in">
+        <i class="fas fa-check-circle text-xl"></i>
+        <span class="font-medium" x-text="successMessage"></span>
+        <button @click="showSuccess = false" class="ml-2 hover:text-green-200">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    #id_profile_picture { display: none; }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-slide-in {
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    /* Input focus effects */
+    input:focus, textarea:focus {
+        transform: scale(1.01);
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .dark ::-webkit-scrollbar-track {
+        background: #1f2937;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
+<script>
+function profileForm() {
+    return {
+        showSuccess: false,
+        successMessage: '',
+        
+        initForm() {
+            // Profile picture preview
+            const profileInput = document.querySelector('#id_profile_picture');
+            if (profileInput) {
+                profileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Validate file type
+                        if (!file.type.startsWith('image/')) {
+                            alert('Please select an image file (JPEG, PNG, etc.)');
+                            profileInput.value = '';
+                            return;
+                        }
+                        
+                        // Validate file size (max 5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('File size must be less than 5MB');
+                            profileInput.value = '';
+                            return;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const preview = document.getElementById('profilePreview');
+                            const icon = document.getElementById('profilePreviewIcon');
+                            if (preview && icon) {
+                                preview.src = event.target.result;
+                                preview.classList.remove('hidden');
+                                icon.classList.add('hidden');
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+            
+            // Check for success message in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('updated') === 'true') {
+                this.showSuccessMessage('Profile updated successfully!');
+            }
+        },
+        
+        showSuccessMessage(message) {
+            this.successMessage = message;
+            this.showSuccess = true;
+            setTimeout(() => {
+                this.showSuccess = false;
+            }, 3000);
+        }
+    }
+}
+</script>
+{% endblock %}

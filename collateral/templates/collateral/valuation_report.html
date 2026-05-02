@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Valuation Report - Collateral{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Valuation Report</h2>
+                <p class="mt-1 opacity-90">Collateral valuation and LTV analysis</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-chart-line text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Stats with Icons -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Collateral Value</p>
+                    <p class="text-2xl font-bold text-green-600" id="totalValue">ZMW 0</p>
+                    <p class="text-xs text-gray-500 mt-1">Sum of all estimated values</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-line text-green-600 dark:text-green-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Average Value per Asset</p>
+                    <p class="text-2xl font-bold text-blue-600" id="avgValue">ZMW 0</p>
+                    <p class="text-xs text-gray-500 mt-1">Mean value across all assets</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calculator text-blue-600 dark:text-blue-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Average LTV Ratio</p>
+                    <p class="text-2xl font-bold text-purple-600" id="avgLtv">0%</p>
+                    <p class="text-xs text-gray-500 mt-1">Loan-to-value percentage</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percent text-purple-600 dark:text-purple-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Highest Value Asset</p>
+                    <p class="text-2xl font-bold text-orange-600" id="highestValue">ZMW 0</p>
+                    <p class="text-xs text-gray-500 mt-1" id="highestAsset">-</p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-crown text-orange-600 dark:text-orange-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Value Distribution Chart -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-pie mr-2 text-blue-500"></i>Value Distribution by Range
+            </h3>
+            <canvas id="valueRangeChart" height="250"></canvas>
+            <div class="mt-4 text-center text-sm text-gray-500">
+                Distribution of asset values across different ranges
+            </div>
+        </div>
+        
+        <!-- Top Assets by Value -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-trophy mr-2 text-yellow-500"></i>Top 5 Most Valuable Assets
+            </h3>
+            <div class="space-y-3" id="topAssetsList">
+                <div class="text-center text-gray-500">Loading top assets...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Valuation Table with Sorting -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-4 border-b dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                    <i class="fas fa-table mr-2 text-blue-500"></i>Collateral Valuation Details
+                </h3>
+                <div class="flex space-x-2">
+                    <button onclick="sortTable('value')" class="text-sm text-gray-600 hover:text-blue-600 dark:text-gray-400">
+                        <i class="fas fa-sort-amount-down mr-1"></i>Sort by Value
+                    </button>
+                    <button onclick="exportTableToCSV()" class="text-sm text-green-600 hover:text-green-700">
+                        <i class="fas fa-download mr-1"></i>Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full" id="valuationTable">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="sortTable('id')">
+                            Collateral ID <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="sortTable('title')">
+                            Title <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="sortTable('client')">
+                            Client <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onclick="sortTable('value')">
+                            Estimated Value <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            LTV Ratio
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Max Loan
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Condition
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="valuationTableBody">
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <div class="loader mx-auto mb-4"></div>
+                            Loading valuation data...
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot id="valuationTableFooter" class="bg-gray-50 dark:bg-gray-700 font-semibold">
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+            <p class="text-sm opacity-90">Total Portfolio Value</p>
+            <p class="text-2xl font-bold" id="footerTotalValue">ZMW 0</p>
+        </div>
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+            <p class="text-sm opacity-90">Total Potential Loan Amount</p>
+            <p class="text-2xl font-bold" id="totalPotentialLoan">ZMW 0</p>
+        </div>
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white">
+            <p class="text-sm opacity-90">Number of Assets</p>
+            <p class="text-2xl font-bold" id="totalAssets">0</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let collateralData = [];
+let currentSortColumn = 'value';
+let currentSortDirection = 'desc';
+
+async function loadValuationReport() {
+    try {
+        const response = await fetch('/collateral/api/list/');
+        const data = await response.json();
+        
+        if (data.collaterals && data.collaterals.length > 0) {
+            collateralData = data.collaterals;
+            renderTable();
+            calculateStats();
+            renderCharts();
+            renderTopAssets();
+        } else {
+            document.getElementById('valuationTableBody').innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">No collateral data available</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading valuation report:', error);
+        document.getElementById('valuationTableBody').innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">Error loading data</td></tr>';
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('valuationTableBody');
+    let sortedData = [...collateralData];
+    
+    // Sort data
+    sortedData.sort((a, b) => {
+        let aVal, bVal;
+        if (currentSortColumn === 'value') {
+            aVal = a.estimated_value;
+            bVal = b.estimated_value;
+        } else if (currentSortColumn === 'id') {
+            aVal = a.collateral_id;
+            bVal = b.collateral_id;
+        } else if (currentSortColumn === 'title') {
+            aVal = a.title;
+            bVal = b.title;
+        } else if (currentSortColumn === 'client') {
+            aVal = a.client_name;
+            bVal = b.client_name;
+        }
+        
+        if (currentSortDirection === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    tbody.innerHTML = '';
+    let totalValue = 0;
+    let totalPotentialLoan = 0;
+    
+    sortedData.forEach(collateral => {
+        const ltv = 70; // Default LTV ratio
+        const maxLoan = collateral.estimated_value * (ltv / 100);
+        totalValue += collateral.estimated_value;
+        totalPotentialLoan += maxLoan;
+        
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer';
+        row.onclick = () => window.location.href = `/collateral/${collateral.id}/`;
+        row.innerHTML = `
+            <td class="px-6 py-4 text-sm font-mono">${collateral.collateral_id}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${collateral.title}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${collateral.client_name}</td>
+            <td class="px-6 py-4 text-sm text-right font-semibold text-green-600">ZMW ${collateral.estimated_value.toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-right">${ltv}%</td>
+            <td class="px-6 py-4 text-sm text-right text-blue-600">ZMW ${maxLoan.toLocaleString()}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs rounded-full
+                    ${collateral.condition === 'new' ? 'bg-green-100 text-green-700' :
+                      collateral.condition === 'excellent' ? 'bg-blue-100 text-blue-700' :
+                      collateral.condition === 'very_good' ? 'bg-teal-100 text-teal-700' :
+                      collateral.condition === 'good' ? 'bg-emerald-100 text-emerald-700' :
+                      collateral.condition === 'fair' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'}">
+                    ${collateral.condition || 'Good'}
+                </span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Add footer
+    const footer = document.getElementById('valuationTableFooter');
+    footer.innerHTML = `
+        <tr>
+            <td colspan="3" class="px-6 py-3 text-right font-semibold">Total:</td>
+            <td class="px-6 py-3 text-right font-bold text-green-600">ZMW ${totalValue.toLocaleString()}</td>
+            <td class="px-6 py-3 text-right"></td>
+            <td class="px-6 py-3 text-right font-bold text-blue-600">ZMW ${totalPotentialLoan.toLocaleString()}</td>
+            <td class="px-6 py-3"></td>
+        </tr>
+    `;
+    
+    document.getElementById('footerTotalValue').textContent = `ZMW ${totalValue.toLocaleString()}`;
+    document.getElementById('totalPotentialLoan').textContent = `ZMW ${totalPotentialLoan.toLocaleString()}`;
+    document.getElementById('totalAssets').textContent = collateralData.length;
+}
+
+function calculateStats() {
+    if (collateralData.length === 0) return;
+    
+    let totalValue = 0;
+    let highestValue = 0;
+    let highestAsset = '';
+    
+    collateralData.forEach(collateral => {
+        totalValue += collateral.estimated_value;
+        if (collateral.estimated_value > highestValue) {
+            highestValue = collateral.estimated_value;
+            highestAsset = collateral.title;
+        }
+    });
+    
+    const avgValue = totalValue / collateralData.length;
+    const avgLtv = 70; // Default LTV
+    
+    document.getElementById('totalValue').textContent = `ZMW ${totalValue.toLocaleString()}`;
+    document.getElementById('avgValue').textContent = `ZMW ${avgValue.toLocaleString()}`;
+    document.getElementById('avgLtv').textContent = `${avgLtv}%`;
+    document.getElementById('highestValue').textContent = `ZMW ${highestValue.toLocaleString()}`;
+    document.getElementById('highestAsset').textContent = highestAsset;
+}
+
+function renderCharts() {
+    // Value Range Distribution Chart
+    const ranges = [
+        { min: 0, max: 10000, label: '0 - 10k', count: 0 },
+        { min: 10000, max: 50000, label: '10k - 50k', count: 0 },
+        { min: 50000, max: 100000, label: '50k - 100k', count: 0 },
+        { min: 100000, max: 500000, label: '100k - 500k', count: 0 },
+        { min: 500000, max: Infinity, label: '500k+', count: 0 }
+    ];
+    
+    collateralData.forEach(collateral => {
+        const value = collateral.estimated_value;
+        for (const range of ranges) {
+            if (value >= range.min && value < range.max) {
+                range.count++;
+                break;
+            }
+        }
+    });
+    
+    const ctx = document.getElementById('valueRangeChart')?.getContext('2d');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ranges.map(r => r.label),
+                datasets: [{
+                    label: 'Number of Assets',
+                    data: ranges.map(r => r.count),
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 8,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.raw} assets` } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Number of Assets' } },
+                    x: { title: { display: true, text: 'Value Range (ZMW)' } }
+                }
+            }
+        });
+    }
+}
+
+function renderTopAssets() {
+    const topAssets = [...collateralData].sort((a, b) => b.estimated_value - a.estimated_value).slice(0, 5);
+    const container = document.getElementById('topAssetsList');
+    
+    if (topAssets.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500">No assets found</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    topAssets.forEach((asset, index) => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:shadow-md transition';
+        div.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center text-white font-bold">
+                    ${index + 1}
+                </div>
+                <div>
+                    <p class="font-medium text-gray-800 dark:text-white">${asset.title}</p>
+                    <p class="text-xs text-gray-500">${asset.collateral_id}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-semibold text-green-600">ZMW ${asset.estimated_value.toLocaleString()}</p>
+                <p class="text-xs text-gray-400">${asset.client_name}</p>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function sortTable(column) {
+    if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = column;
+        currentSortDirection = 'desc';
+    }
+    renderTable();
+}
+
+function exportTableToCSV() {
+    let csv = 'Collateral ID,Title,Client,Estimated Value (ZMW),LTV Ratio (%),Max Loan (ZMW),Condition\n';
+    
+    collateralData.forEach(collateral => {
+        const ltv = 70;
+        const maxLoan = collateral.estimated_value * (ltv / 100);
+        csv += `"${collateral.collateral_id}","${collateral.title}","${collateral.client_name}",${collateral.estimated_value},${ltv},${maxLoan},"${collateral.condition || 'Good'}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `valuation_report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+document.addEventListener('DOMContentLoaded', loadValuationReport);
+</script>
+
+<style>
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}

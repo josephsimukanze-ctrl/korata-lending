@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Users{% endblock %}
+
+{% block content %}
+<div x-data="userForm()" x-init="initForm()" class="max-w-4xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'users:user_list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Users
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">{{ title }}</h2>
+                    <p class="text-blue-100 mt-1 text-sm">Fill in the user information below</p>
+                </div>
+                {% if user %}
+                <div class="bg-white/20 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm">ID: {{ user.employee_id|default:user.id }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-6" @submit="validateForm">
+            {% csrf_token %}
+            
+            <!-- Profile Picture Section -->
+            <div class="flex justify-center mb-6">
+                <div class="relative">
+                    <div class="w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center border-4 border-white shadow-lg" id="profilePreviewContainer">
+                        {% if user and user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="w-full h-full object-cover" id="profilePreview">
+                        {% else %}
+                            <i class="fas fa-user text-5xl text-gray-400" id="profilePreviewIcon"></i>
+                            <img src="" alt="Profile" class="w-full h-full object-cover hidden" id="profilePreview">
+                        {% endif %}
+                    </div>
+                    <label for="id_profile_picture" class="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition shadow-lg">
+                        <i class="fas fa-camera text-white text-sm"></i>
+                    </label>
+                    {{ form.profile_picture }}
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center ml-2">Click camera to upload profile picture</p>
+            </div>
+            
+            <!-- Hidden username field (will be auto-generated) -->
+            <input type="hidden" name="username" id="id_username" x-model="generatedUsername">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- First Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        First Name <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" name="first_name" id="id_first_name" required
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    {% if form.first_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Last Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Last Name <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" name="last_name" id="id_last_name" required
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    {% if form.last_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-envelope text-gray-400"></i>
+                        </div>
+                        <input type="email" name="email" id="id_email" required
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    {% if form.email.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Phone Number -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-phone text-gray-400"></i>
+                        </div>
+                        <input type="tel" name="phone_number" id="id_phone_number" required
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Format: +260XXXXXXXXX</p>
+                    {% if form.phone_number.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.phone_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Role -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Role <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-briefcase text-gray-400"></i>
+                        </div>
+                        <select name="role" id="id_role" required class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Select Role</option>
+                            <option value="ceo">CEO</option>
+                            <option value="admin">System Admin</option>
+                            <option value="collateral_officer">Collateral Officer</option>
+                            <option value="accountant">Accountant</option>
+                            <option value="auditor">Auditor</option>
+                        </select>
+                    </div>
+                    {% if form.role.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.role.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Department -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-building text-gray-400"></i>
+                        </div>
+                        <select name="department" id="id_department" class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            <option value="">Select Department</option>
+                            <option value="executive">Executive</option>
+                            <option value="it">IT</option>
+                            <option value="finance">Finance</option>
+                            <option value="operations">Operations</option>
+                            <option value="risk">Risk Management</option>
+                            <option value="legal">Legal</option>
+                            <option value="hr">Human Resources</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Position -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-briefcase text-gray-400"></i>
+                        </div>
+                        <input type="text" name="position" id="id_position"
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                </div>
+                
+                <!-- Auto-generated Username Display -->
+                <div class="md:col-span-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <i class="fas fa-magic text-blue-500 mr-1"></i> Login Username
+                            </label>
+                            <p class="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400" x-text="generatedUsername">-</p>
+                            <p class="text-xs text-gray-500 mt-1">Username is automatically generated from first name and last name</p>
+                        </div>
+                        <button type="button" @click="regenerateUsername()" class="text-blue-600 hover:text-blue-700">
+                            <i class="fas fa-sync-alt"></i> Regenerate
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Auto-generated Password Display -->
+                <div class="md:col-span-2 bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <i class="fas fa-key text-green-500 mr-1"></i> Login Password
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" x-model="generatedPassword" readonly 
+                                       class="flex-1 font-mono text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2">
+                                <button type="button" @click="copyPassword()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button type="button" @click="regeneratePassword()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i> 
+                                User will use this username and password to login. Credentials will be sent to their email.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bio -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bio</label>
+                    <textarea name="bio" id="id_bio" rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+                </div>
+                
+                <!-- Address -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address</label>
+                    <textarea name="address" id="id_address" rows="2"
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
+                </div>
+                
+                <!-- City -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+                    <input type="text" name="city" id="id_city"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                
+                <!-- Country -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country</label>
+                    <input type="text" name="country" id="id_country" value="Zambia"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+            </div>
+            
+            <!-- Password fields (hidden - auto-generated) -->
+            <input type="hidden" name="password1" x-model="generatedPassword">
+            <input type="hidden" name="password2" x-model="generatedPassword">
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                <a href="{% url 'users:user_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i>Create User
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function userForm() {
+    return {
+        generatedUsername: '',
+        generatedPassword: '',
+        timeoutId: null,
+        
+        initForm() {
+            // Watch for first name and last name changes
+            const firstNameField = document.querySelector('#id_first_name');
+            const lastNameField = document.querySelector('#id_last_name');
+            
+            if (firstNameField && lastNameField) {
+                firstNameField.addEventListener('input', () => this.generateUsername());
+                lastNameField.addEventListener('input', () => this.generateUsername());
+                
+                // Initial generation
+                this.generateUsername();
+            }
+            
+            // Generate initial password
+            this.generatePassword();
+            
+            // Profile picture preview
+            const profileInput = document.querySelector('#id_profile_picture');
+            if (profileInput) {
+                profileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const preview = document.getElementById('profilePreview');
+                            const icon = document.getElementById('profilePreviewIcon');
+                            if (preview && icon) {
+                                preview.src = event.target.result;
+                                preview.classList.remove('hidden');
+                                icon.classList.add('hidden');
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        },
+        
+        generateUsername() {
+            if (this.timeoutId) {
+                clearTimeout(this.timeoutId);
+            }
+            
+            this.timeoutId = setTimeout(() => {
+                const firstName = document.querySelector('#id_first_name')?.value || '';
+                const lastName = document.querySelector('#id_last_name')?.value || '';
+                
+                if (firstName && lastName) {
+                    const baseUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
+                    const randomNum = Math.floor(Math.random() * 900 + 100);
+                    this.generatedUsername = `${baseUsername}${randomNum}`;
+                } else if (firstName) {
+                    const randomNum = Math.floor(Math.random() * 9000 + 1000);
+                    this.generatedUsername = `${firstName.toLowerCase()}${randomNum}`;
+                } else if (lastName) {
+                    const randomNum = Math.floor(Math.random() * 9000 + 1000);
+                    this.generatedUsername = `${lastName.toLowerCase()}${randomNum}`;
+                } else {
+                    const randomNum = Math.floor(Math.random() * 90000 + 10000);
+                    this.generatedUsername = `user${randomNum}`;
+                }
+                
+                this.generatedUsername = this.generatedUsername.replace(/[^a-zA-Z0-9._]/g, '').toLowerCase();
+            }, 300);
+        },
+        
+        regenerateUsername() {
+            this.generateUsername();
+        },
+        
+        generatePassword() {
+            const length = 12;
+            const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const lowercase = "abcdefghijklmnopqrstuvwxyz";
+            const numbers = "0123456789";
+            const special = "!@#$%^&*";
+            
+            let password = "";
+            password += uppercase[Math.floor(Math.random() * uppercase.length)];
+            password += lowercase[Math.floor(Math.random() * lowercase.length)];
+            password += numbers[Math.floor(Math.random() * numbers.length)];
+            password += special[Math.floor(Math.random() * special.length)];
+            
+            const allChars = uppercase + lowercase + numbers + special;
+            for (let i = password.length; i < length; i++) {
+                password += allChars[Math.floor(Math.random() * allChars.length)];
+            }
+            
+            this.generatedPassword = password.split('').sort(() => Math.random() - 0.5).join('');
+        },
+        
+        regeneratePassword() {
+            this.generatePassword();
+        },
+        
+        copyPassword() {
+            navigator.clipboard.writeText(this.generatedPassword).then(() => {
+                const btn = event.target.closest('button');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+            });
+        },
+        
+        validateForm(event) {
+            const firstName = document.querySelector('#id_first_name')?.value;
+            const lastName = document.querySelector('#id_last_name')?.value;
+            const email = document.querySelector('#id_email')?.value;
+            const phone = document.querySelector('#id_phone_number')?.value;
+            const role = document.querySelector('#id_role')?.value;
+            
+            if (!firstName || !lastName) {
+                event.preventDefault();
+                alert('First Name and Last Name are required!');
+                return false;
+            }
+            
+            if (!email) {
+                event.preventDefault();
+                alert('Email is required!');
+                return false;
+            }
+            
+            if (!phone) {
+                event.preventDefault();
+                alert('Phone Number is required!');
+                return false;
+            }
+            
+            if (!role) {
+                event.preventDefault();
+                alert('Role is required!');
+                return false;
+            }
+            
+            if (!this.generatedUsername) {
+                event.preventDefault();
+                alert('Username could not be generated. Please check first and last name.');
+                return false;
+            }
+            
+            if (!this.generatedPassword) {
+                event.preventDefault();
+                alert('Password could not be generated.');
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+</script>
+
+<style>
+    #id_profile_picture {
+        display: none;
+    }
+    
+    input, select, textarea {
+        transition: all 0.2s;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+        transform: scale(1.01);
+    }
+</style>
+{% endblock %}

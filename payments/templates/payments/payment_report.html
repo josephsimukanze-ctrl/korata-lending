@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Reports{% endblock %}
+
+{% block content %}
+<div x-data="paymentReports()" x-init="init()" class="fade-in px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Payment Reports</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">Comprehensive payment analytics and insights</p>
+    </div>
+    
+    <!-- Date Range Filter -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
+                <input type="date" x-model="startDate" @change="fetchReports()" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
+                <input type="date" x-model="endDate" @change="fetchReports()" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700">
+            </div>
+            <div class="flex items-end">
+                <button @click="clearDateRange()" class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                    <i class="fas fa-undo-alt mr-2"></i>Reset Dates
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Today</p>
+                    <p class="text-2xl font-bold text-blue-600" x-text="formatCurrency(todayStats.amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-500" x-text="todayStats.count + ' payments'">0 payments</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-calendar-day text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">This Week</p>
+                    <p class="text-2xl font-bold text-green-600" x-text="formatCurrency(weekStats.amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-500" x-text="weekStats.count + ' payments'">0 payments</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-calendar-week text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">This Month</p>
+                    <p class="text-2xl font-bold text-purple-600" x-text="formatCurrency(monthStats.amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-500" x-text="monthStats.count + ' payments'">0 payments</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-calendar-alt text-purple-600 dark:text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total</p>
+                    <p class="text-2xl font-bold text-emerald-600" x-text="formatCurrency(totalStats.amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-500" x-text="totalStats.count + ' payments'">0 payments</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-chart-line text-emerald-600 dark:text-emerald-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-2xl shadow-lg p-5 border border-yellow-100 dark:border-yellow-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">Pending Payments</p>
+                    <p class="text-2xl font-bold text-yellow-600" x-text="pendingStats.count">0</p>
+                    <p class="text-xs text-gray-500" x-text="formatCurrency(pendingStats.amount)">ZMW 0</p>
+                </div>
+                <i class="fas fa-clock text-3xl text-yellow-500"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-2xl shadow-lg p-5 border border-red-100 dark:border-red-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">Failed Payments</p>
+                    <p class="text-2xl font-bold text-red-600" x-text="failedStats.count">0</p>
+                    <p class="text-xs text-gray-500" x-text="formatCurrency(failedStats.amount)">ZMW 0</p>
+                </div>
+                <i class="fas fa-times-circle text-3xl text-red-500"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl shadow-lg p-5 border border-purple-100 dark:border-purple-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">Refunded</p>
+                    <p class="text-2xl font-bold text-purple-600" x-text="refundedStats.count">0</p>
+                    <p class="text-xs text-gray-500" x-text="formatCurrency(refundedStats.amount)">ZMW 0</p>
+                </div>
+                <i class="fas fa-undo-alt text-3xl text-purple-500"></i>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-2xl shadow-lg p-5 border border-teal-100 dark:border-teal-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">Average Payment</p>
+                    <p class="text-2xl font-bold text-teal-600" x-text="formatCurrency(averagePayment)">ZMW 0</p>
+                    <p class="text-xs text-gray-500">Per transaction</p>
+                </div>
+                <i class="fas fa-chart-simple text-3xl text-teal-500"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Payment Method Breakdown -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Payment Method Breakdown</h3>
+                <span class="text-xs text-gray-500">By amount</span>
+            </div>
+            <canvas id="methodChart" height="250"></canvas>
+            <div class="mt-4 text-center text-sm text-gray-500" x-show="methodData.length === 0">
+                No data available for the selected period
+            </div>
+        </div>
+        
+        <!-- Payment Status Distribution -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Payment Status Distribution</h3>
+                <span class="text-xs text-gray-500">By count</span>
+            </div>
+            <canvas id="statusChart" height="250"></canvas>
+            <div class="mt-4 text-center text-sm text-gray-500" x-show="statusData.length === 0">
+                No data available for the selected period
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Trends Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Daily Payment Trends</h3>
+            <div class="flex space-x-2">
+                <button @click="trendPeriod = 'week'; fetchReports()" :class="trendPeriod === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'" class="px-3 py-1 rounded-lg text-sm transition">
+                    7 Days
+                </button>
+                <button @click="trendPeriod = 'month'; fetchReports()" :class="trendPeriod === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'" class="px-3 py-1 rounded-lg text-sm transition">
+                    30 Days
+                </button>
+                <button @click="trendPeriod = 'quarter'; fetchReports()" :class="trendPeriod === 'quarter' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'" class="px-3 py-1 rounded-lg text-sm transition">
+                    90 Days
+                </button>
+            </div>
+        </div>
+        <canvas id="dailyChart" height="100"></canvas>
+    </div>
+    
+    <!-- Top Clients by Payment -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Top Paying Clients</h3>
+            <span class="text-xs text-gray-500">Last 30 days</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">#</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600">Client</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">Payment Count</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <template x-for="(client, index) in topClients" :key="client.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                            <td class="px-4 py-3 text-sm text-gray-500" x-text="index + 1"></td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-800 dark:text-white" x-text="client.name"></div>
+                                <div class="text-xs text-gray-500" x-text="client.id"></div>
+                            </td>
+                            <td class="px-4 py-3 text-right text-sm text-gray-600" x-text="client.payment_count"></td>
+                            <td class="px-4 py-3 text-right font-semibold text-green-600" x-text="formatCurrency(client.total_amount)"></td>
+                        </tr>
+                    </template>
+                    <tr x-show="topClients.length === 0">
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                            No payment data available
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Export Buttons -->
+    <div class="flex flex-wrap justify-end gap-3">
+        <button @click="exportReport('csv')" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl transition shadow-md hover:shadow-lg flex items-center space-x-2">
+            <i class="fas fa-file-csv"></i>
+            <span>Export CSV</span>
+        </button>
+        <button @click="exportReport('excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl transition shadow-md hover:shadow-lg flex items-center space-x-2">
+            <i class="fas fa-file-excel"></i>
+            <span>Export Excel</span>
+        </button>
+        <button @click="printReport()" class="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl transition shadow-md hover:shadow-lg flex items-center space-x-2">
+            <i class="fas fa-print"></i>
+            <span>Print Report</span>
+        </button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function paymentReports() {
+    return {
+        startDate: '',
+        endDate: '',
+        trendPeriod: 'month',
+        todayStats: { amount: 0, count: 0 },
+        weekStats: { amount: 0, count: 0 },
+        monthStats: { amount: 0, count: 0 },
+        totalStats: { amount: 0, count: 0 },
+        pendingStats: { amount: 0, count: 0 },
+        failedStats: { amount: 0, count: 0 },
+        refundedStats: { amount: 0, count: 0 },
+        averagePayment: 0,
+        topClients: [],
+        methodData: [],
+        statusData: [],
+        dailyLabels: [],
+        dailyAmounts: [],
+        methodChart: null,
+        statusChart: null,
+        dailyChart: null,
+        
+        init() {
+            this.fetchReports();
+        },
+        
+        fetchReports() {
+            let url = '/payments/api/reports/';
+            const params = new URLSearchParams();
+            if (this.startDate) params.append('start_date', this.startDate);
+            if (this.endDate) params.append('end_date', this.endDate);
+            if (this.trendPeriod) params.append('period', this.trendPeriod);
+            if (params.toString()) url += '?' + params.toString();
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    this.todayStats = data.today || { amount: 0, count: 0 };
+                    this.weekStats = data.week || { amount: 0, count: 0 };
+                    this.monthStats = data.month || { amount: 0, count: 0 };
+                    this.totalStats = data.total || { amount: 0, count: 0 };
+                    this.pendingStats = data.pending || { amount: 0, count: 0 };
+                    this.failedStats = data.failed || { amount: 0, count: 0 };
+                    this.refundedStats = data.refunded || { amount: 0, count: 0 };
+                    this.averagePayment = data.average_payment || 0;
+                    this.topClients = data.top_clients || [];
+                    this.methodData = data.method_breakdown || [];
+                    this.statusData = data.status_distribution || [];
+                    this.dailyLabels = data.daily_labels || [];
+                    this.dailyAmounts = data.daily_amounts || [];
+                    
+                    this.updateCharts();
+                })
+                .catch(error => console.error('Error fetching reports:', error));
+        },
+        
+        clearDateRange() {
+            this.startDate = '';
+            this.endDate = '';
+            this.fetchReports();
+        },
+        
+        updateCharts() {
+            // Method Breakdown Chart
+            if (this.methodChart) this.methodChart.destroy();
+            const methodCtx = document.getElementById('methodChart').getContext('2d');
+            this.methodChart = new Chart(methodCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: this.methodData.map(m => m.name),
+                    datasets: [{
+                        data: this.methodData.map(m => m.amount),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+            
+            // Status Distribution Chart
+            if (this.statusChart) this.statusChart.destroy();
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            this.statusChart = new Chart(statusCtx, {
+                type: 'pie',
+                data: {
+                    labels: this.statusData.map(s => s.name),
+                    datasets: [{
+                        data: this.statusData.map(s => s.count),
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+            
+            // Daily Trends Chart
+            if (this.dailyChart) this.dailyChart.destroy();
+            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+            this.dailyChart = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: this.dailyLabels,
+                    datasets: [{
+                        label: 'Payment Amount (ZMW)',
+                        data: this.dailyAmounts,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        },
+        
+        formatCurrency(value) {
+            return `ZMW ${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        },
+        
+        exportReport(format) {
+            let url = `/payments/export/report/?format=${format}`;
+            if (this.startDate) url += `&start_date=${this.startDate}`;
+            if (this.endDate) url += `&end_date=${this.endDate}`;
+            window.location.href = url;
+        },
+        
+        printReport() {
+            window.print();
+        }
+    }
+}
+</script>
+
+<style>
+    @media print {
+        header, footer, .no-print, button, a {
+            display: none !important;
+        }
+        body {
+            background: white;
+            padding: 20px;
+        }
+        .shadow-lg, .shadow-xl {
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}

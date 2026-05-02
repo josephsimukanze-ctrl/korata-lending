@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payments - Korata Lending{% endblock %}
+
+{% block content %}
+<div x-data="paymentManagement()" x-init="init()" class="fade-in px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Payment Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Track and manage all financial transactions</p>
+        </div>
+        <div class="flex space-x-3">
+            <button @click="exportPayments('csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition-all flex items-center space-x-2 shadow-md">
+                <i class="fas fa-file-csv"></i>
+                <span>CSV</span>
+            </button>
+            <a href="{% url 'payments:payment_create' %}" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl transition-all flex items-center space-x-2 shadow-md">
+                <i class="fas fa-plus"></i>
+                <span>Record Payment</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 hover:shadow-xl transition border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Payments</p>
+                    <p class="text-2xl font-bold text-gray-800 dark:text-white" x-text="stats.total_count">0</p>
+                    <p class="text-xs text-gray-400">All time</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-credit-card text-blue-600 dark:text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 hover:shadow-xl transition border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Amount</p>
+                    <p class="text-2xl font-bold text-green-600" x-text="formatCurrency(stats.total_amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-400">All time</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-600 dark:text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 hover:shadow-xl transition border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Completed</p>
+                    <p class="text-2xl font-bold text-emerald-600" x-text="stats.completed_count">0</p>
+                    <p class="text-xs text-gray-400">Successful payments</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 hover:shadow-xl transition border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Pending</p>
+                    <p class="text-2xl font-bold text-yellow-600" x-text="stats.pending_count">0</p>
+                    <p class="text-xs text-gray-400">Awaiting approval</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 dark:text-yellow-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 hover:shadow-xl transition border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Today</p>
+                    <p class="text-2xl font-bold text-purple-600" x-text="formatCurrency(stats.today_amount)">ZMW 0</p>
+                    <p class="text-xs text-gray-400" x-text="stats.today_count + ' payments'">0 payments</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-calendar-day text-purple-600 dark:text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-gray-700">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-search mr-1"></i> Search
+                </label>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" x-model="searchQuery" @input="debouncedFilter()" 
+                           placeholder="Search by payment ID, client name, or reference..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-tag mr-1"></i> Status
+                </label>
+                <select x-model="statusFilter" @change="filterPayments()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+                    <option value="">All Status</option>
+                    <option value="pending">⏳ Pending</option>
+                    <option value="completed">✅ Completed</option>
+                    <option value="failed">❌ Failed</option>
+                    <option value="cancelled">🚫 Cancelled</option>
+                    <option value="refunded">🔄 Refunded</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-calendar mr-1"></i> From Date
+                </label>
+                <input type="date" x-model="dateFrom" @change="filterPayments()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-calendar mr-1"></i> To Date
+                </label>
+                <input type="date" x-model="dateTo" @change="filterPayments()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700">
+            </div>
+        </div>
+        
+        <!-- Active Filters Display -->
+        <div class="flex flex-wrap gap-2 mt-4" x-show="hasActiveFilters()">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
+            <span x-show="searchQuery" class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                Search: <span x-text="searchQuery"></span>
+                <button @click="searchQuery = ''; filterPayments()" class="ml-1 hover:text-blue-900">&times;</button>
+            </span>
+            <span x-show="statusFilter" class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">
+                Status: <span x-text="statusFilter"></span>
+                <button @click="statusFilter = ''; filterPayments()" class="ml-1 hover:text-purple-900">&times;</button>
+            </span>
+            <span x-show="dateFrom" class="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                From: <span x-text="dateFrom"></span>
+                <button @click="dateFrom = ''; filterPayments()" class="ml-1 hover:text-green-900">&times;</button>
+            </span>
+            <span x-show="dateTo" class="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                To: <span x-text="dateTo"></span>
+                <button @click="dateTo = ''; filterPayments()" class="ml-1 hover:text-green-900">&times;</button>
+            </span>
+            <button @click="clearFilters()" class="text-sm text-red-600 hover:text-red-700">
+                Clear all
+            </button>
+        </div>
+        
+        <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center space-x-3">
+                <span class="text-sm text-gray-600">Show:</span>
+                <select x-model="itemsPerPage" @change="filterPayments()" class="text-sm border rounded-lg px-2 py-1 dark:bg-gray-700">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <button @click="refreshData()" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
+                <i class="fas fa-sync-alt mr-1" :class="{'animate-spin': loading}"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <!-- Payments Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment ID</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Loan</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Method</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reference</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <template x-for="payment in paginatedPayments" :key="payment.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" 
+                            :class="{'bg-red-50 dark:bg-red-900/20': payment.status === 'failed', 'bg-green-50 dark:bg-green-900/20': payment.status === 'completed'}">
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-sm font-medium text-gray-900 dark:text-white" x-text="payment.payment_id"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-user text-white text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="payment.client_name"></div>
+                                        <div class="text-xs text-gray-500" x-text="payment.client_id"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-sm text-gray-600 dark:text-gray-400" x-text="payment.loan_id || '-'"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm font-semibold text-green-600 dark:text-green-400" x-text="'ZMW ' + formatNumber(payment.amount)"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm" x-text="payment.method || 'N/A'"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full" :class="getStatusClass(payment.status)">
+                                    <i class="fas mr-1 text-xs" :class="getStatusIcon(payment.status)"></i>
+                                    <span x-text="payment.status_display"></span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-mono text-gray-500" x-text="payment.reference || '-'"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(payment.payment_date)"></td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <div class="flex justify-end space-x-2">
+                                    <a :href="'/payments/' + payment.id + '/'" class="text-blue-600 hover:text-blue-800 p-1 transition-colors" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a :href="'/payments/' + payment.id + '/approve/'" x-show="payment.status === 'pending'" class="text-green-600 hover:text-green-800 p-1 transition-colors" title="Approve">
+                                        <i class="fas fa-check-circle"></i>
+                                    </a>
+                                    <a :href="'/payments/' + payment.id + '/receipt/'" class="text-purple-600 hover:text-purple-800 p-1 transition-colors" title="Receipt" x-show="payment.status === 'completed'">
+                                        <i class="fas fa-receipt"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="filteredPayments.length === 0 && !loading">
+                        <td colspan="9" class="px-6 py-12 text-center text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-credit-card text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                                <p class="text-lg font-medium">No payments found</p>
+                                <p class="text-sm mt-1">Try adjusting your search or filters</p>
+                                <a href="{% url 'payments:payment_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                    <i class="fas fa-plus-circle mr-2"></i> Record your first payment
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr x-show="loading">
+                        <td colspan="9" class="px-6 py-12 text-center">
+                            <div class="inline-flex items-center space-x-2">
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                <span class="text-gray-500">Loading payments...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="px-6 py-4 border-t dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span x-text="((currentPage - 1) * itemsPerPage) + 1"></span> to 
+                <span x-text="Math.min(currentPage * itemsPerPage, filteredPayments.length)"></span> of 
+                <span x-text="filteredPayments.length"></span> payments
+            </div>
+            <div class="flex space-x-2">
+                <button @click="firstPage" :disabled="currentPage === 1" 
+                        class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button @click="previousPage" :disabled="currentPage === 1" 
+                        class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="flex items-center space-x-1">
+                    <template x-for="page in getPageNumbers()" :key="page">
+                        <button @click="goToPage(page)" 
+                                :class="{'bg-blue-600 text-white': currentPage === page, 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700': currentPage !== page}"
+                                class="w-8 h-8 text-sm rounded-lg transition"
+                                x-text="page">
+                        </button>
+                    </template>
+                </div>
+                <button @click="nextPage" :disabled="currentPage === totalPages" 
+                        class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button @click="lastPage" :disabled="currentPage === totalPages" 
+                        class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    [x-cloak] { display: none; }
+</style>
+
+<script>
+function paymentManagement() {
+    return {
+        payments: [],
+        filteredPayments: [],
+        searchQuery: '',
+        statusFilter: '',
+        dateFrom: '',
+        dateTo: '',
+        currentPage: 1,
+        itemsPerPage: 10,
+        loading: false,
+        searchTimeout: null,
+        
+        stats: {
+            total_count: 0,
+            total_amount: 0,
+            completed_count: 0,
+            pending_count: 0,
+            today_amount: 0,
+            today_count: 0
+        },
+        
+        init() {
+            this.fetchPayments();
+            this.fetchStats();
+        },
+        
+        fetchPayments() {
+            this.loading = true;
+            fetch('/payments/api/list/')
+                .then(response => response.json())
+                .then(data => {
+                    this.payments = data.payments;
+                    this.filterPayments();
+                    this.loading = false;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    this.loading = false;
+                });
+        },
+        
+        fetchStats() {
+            fetch('/payments/api/stats/')
+                .then(response => response.json())
+                .then(data => {
+                    this.stats = data;
+                })
+                .catch(error => console.error('Error fetching stats:', error));
+        },
+        
+        refreshData() {
+            this.fetchPayments();
+            this.fetchStats();
+        },
+        
+        debouncedFilter() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.filterPayments();
+            }, 300);
+        },
+        
+        filterPayments() {
+            let filtered = [...this.payments];
+            
+            if (this.searchQuery) {
+                const search = this.searchQuery.toLowerCase();
+                filtered = filtered.filter(p => 
+                    (p.payment_id && p.payment_id.toLowerCase().includes(search)) ||
+                    (p.client_name && p.client_name.toLowerCase().includes(search)) ||
+                    (p.reference && p.reference.toLowerCase().includes(search))
+                );
+            }
+            
+            if (this.statusFilter) {
+                filtered = filtered.filter(p => p.status === this.statusFilter);
+            }
+            
+            if (this.dateFrom) {
+                filtered = filtered.filter(p => p.payment_date >= this.dateFrom);
+            }
+            
+            if (this.dateTo) {
+                filtered = filtered.filter(p => p.payment_date <= this.dateTo);
+            }
+            
+            this.filteredPayments = filtered;
+            this.currentPage = 1;
+        },
+        
+        hasActiveFilters() {
+            return this.searchQuery || this.statusFilter || this.dateFrom || this.dateTo;
+        },
+        
+        clearFilters() {
+            this.searchQuery = '';
+            this.statusFilter = '';
+            this.dateFrom = '';
+            this.dateTo = '';
+            this.filterPayments();
+        },
+        
+        get paginatedPayments() {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            return this.filteredPayments.slice(start, start + this.itemsPerPage);
+        },
+        
+        get totalPages() {
+            return Math.ceil(this.filteredPayments.length / this.itemsPerPage);
+        },
+        
+        getPageNumbers() {
+            const total = this.totalPages;
+            const current = this.currentPage;
+            const pages = [];
+            
+            if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i);
+            } else {
+                if (current <= 3) {
+                    for (let i = 1; i <= 5; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(total);
+                } else if (current >= total - 2) {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = total - 4; i <= total; i++) pages.push(i);
+                } else {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(total);
+                }
+            }
+            return pages;
+        },
+        
+        firstPage() { this.currentPage = 1; },
+        lastPage() { this.currentPage = this.totalPages; },
+        previousPage() { if (this.currentPage > 1) this.currentPage--; },
+        nextPage() { if (this.currentPage < this.totalPages) this.currentPage++; },
+        goToPage(page) { if (page !== '...') this.currentPage = page; },
+        
+        getStatusClass(status) {
+            const classes = {
+                'pending': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                'completed': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                'failed': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                'cancelled': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400',
+                'refunded': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-700';
+        },
+        
+        getStatusIcon(status) {
+            const icons = {
+                'pending': 'fa-clock',
+                'completed': 'fa-check-circle',
+                'failed': 'fa-times-circle',
+                'cancelled': 'fa-ban',
+                'refunded': 'fa-undo-alt'
+            };
+            return icons[status] || 'fa-circle';
+        },
+        
+        formatNumber(num) {
+            if (!num && num !== 0) return '0.00';
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return 'N/A';
+            }
+        },
+        
+        formatDateTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return 'N/A';
+            }
+        },
+        
+        formatCurrency(value) {
+            return `ZMW ${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        },
+        
+        exportPayments(format) {
+            const params = new URLSearchParams();
+            if (this.searchQuery) params.append('search', this.searchQuery);
+            if (this.statusFilter) params.append('status', this.statusFilter);
+            if (this.dateFrom) params.append('date_from', this.dateFrom);
+            if (this.dateTo) params.append('date_to', this.dateTo);
+            params.append('format', format);
+            
+            window.location.href = `/payments/export/?${params.toString()}`;
+        }
+    }
+}
+</script>
+{% endblock %}

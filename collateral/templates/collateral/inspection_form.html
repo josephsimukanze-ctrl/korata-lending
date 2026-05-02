@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if inspection %}Edit{% else %}New{% endif %} Inspection{% endblock %}
+
+{% block content %}
+<div x-data="inspectionForm()" x-init="initForm()" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:inspections' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Inspections
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">
+                        {% if inspection %}Edit Inspection{% else %}New Inspection{% endif %}
+                    </h2>
+                    <p class="text-blue-100 mt-1 flex items-center">
+                        <i class="fas fa-clipboard-list mr-2 text-sm"></i>
+                        Record collateral inspection details
+                    </p>
+                </div>
+                <div class="hidden md:block">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-clipboard-list text-white text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-8" id="inspectionForm" @submit="validateForm">
+            {% csrf_token %}
+            
+            <!-- Error Messages -->
+            <div x-show="errors.length > 0" x-cloak class="mb-6 animate-shake">
+                <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-500 text-lg"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-semibold text-red-800 dark:text-red-200">Please correct the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <template x-for="error in errors" :key="error">
+                                        <li x-text="error"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Collateral Selection -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-gem mr-2 text-blue-500"></i>Collateral <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-gem text-gray-400"></i>
+                        </div>
+                        <select name="collateral" x-model="collateralId" @change="updateCollateralInfo()" required 
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="">Select Collateral</option>
+                            {% for collateral in collaterals %}
+                            <option value="{{ collateral.id }}" 
+                                    data-title="{{ collateral.title }}"
+                                    data-id="{{ collateral.collateral_id }}"
+                                    data-value="{{ collateral.estimated_value }}"
+                                    data-client="{{ collateral.client.full_name }}"
+                                    {% if inspection and inspection.collateral.id == collateral.id %}selected{% endif %}>
+                                {{ collateral.title }} ({{ collateral.collateral_id }}) - {{ collateral.client.full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Collateral Info Card -->
+                    <div x-show="selectedCollateral" x-transition.duration.300ms 
+                         class="mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300">Selected Collateral</h4>
+                                <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Title:</span>
+                                        <span class="font-medium text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.title"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">ID:</span>
+                                        <span class="font-mono text-sm text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.id"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Client:</span>
+                                        <span class="text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.client"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Value:</span>
+                                        <span class="font-bold text-green-600 ml-2" x-text="'ZMW ' + formatNumber(selectedCollateral.value)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Inspection Type -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-tag mr-2 text-purple-500"></i>Inspection Type <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-tag text-gray-400 group-focus-within:text-purple-500 transition-colors"></i>
+                        </div>
+                        <select name="inspection_type" x-model="inspectionType" required 
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="initial" {% if inspection and inspection.inspection_type == 'initial' %}selected{% endif %}>📋 Initial Inspection</option>
+                            <option value="quarterly" {% if inspection and inspection.inspection_type == 'quarterly' %}selected{% endif %}>📅 Quarterly Inspection</option>
+                            <option value="annual" {% if inspection and inspection.inspection_type == 'annual' %}selected{% endif %}>📆 Annual Inspection</option>
+                            <option value="special" {% if inspection and inspection.inspection_type == 'special' %}selected{% endif %}>🔍 Special Inspection</option>
+                            <option value="release" {% if inspection and inspection.inspection_type == 'release' %}selected{% endif %}>✅ Pre-release Inspection</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Inspection Date -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-calendar-alt mr-2 text-green-500"></i>Inspection Date <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-calendar-alt text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <input type="date" name="inspection_date" x-model="inspectionDate" required
+                               value="{{ inspection.inspection_date|date:'Y-m-d'|default:'' }}"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    </div>
+                </div>
+                
+                <!-- Condition -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-chart-line mr-2 text-yellow-500"></i>Condition Found <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-chart-line text-gray-400 group-focus-within:text-yellow-500 transition-colors"></i>
+                        </div>
+                        <select name="condition" x-model="condition" required 
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="new">🆕 New</option>
+                            <option value="excellent">⭐ Excellent</option>
+                            <option value="very_good">✅ Very Good</option>
+                            <option value="good">👍 Good</option>
+                            <option value="fair">⚠️ Fair</option>
+                            <option value="poor">🔻 Poor</option>
+                            <option value="damaged">💔 Damaged</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes Section -->
+            <div class="mt-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-sticky-note mr-2 text-yellow-500"></i>Inspection Notes <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <textarea name="notes" x-model="notes" rows="4" required
+                              class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none"
+                              placeholder="Detailed inspection findings including condition, any damage, maintenance observations..."></textarea>
+                </div>
+                <p class="text-xs text-gray-500 mt-1 flex items-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Be specific about the condition, any defects, and overall assessment
+                </p>
+            </div>
+            
+            <!-- Photo Upload -->
+            <div class="mt-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-camera mr-2 text-green-500"></i>Inspection Photos
+                </label>
+                <div class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-blue-500 transition-all duration-300 cursor-pointer group" @click="$refs.photoInput.click()">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 group-hover:text-blue-500 transition-colors mb-3 block"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors">Click or drag to upload photos</p>
+                    <p class="text-xs text-gray-400 mt-1">JPEG, PNG, GIF (Max 5MB)</p>
+                    <input type="file" name="photos" accept="image/*" class="hidden" x-ref="photoInput" @change="handlePhotoUpload">
+                </div>
+                <div x-show="photoPreview" class="mt-3">
+                    <img :src="photoPreview" class="h-24 w-auto rounded-lg shadow-md object-cover">
+                </div>
+                {% if inspection and inspection.photos %}
+                <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                        <i class="fas fa-image mr-2 text-blue-500"></i>
+                        Current photo:
+                        <a href="{{ inspection.photos.url }}" target="_blank" class="ml-2 text-blue-600 hover:text-blue-800">View</a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Recommendations Section -->
+            <div class="mt-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-lightbulb mr-2 text-orange-500"></i>Recommendations
+                </label>
+                <textarea name="recommendation" x-model="recommendation" rows="3"
+                          class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none"
+                          placeholder="Any recommendations from this inspection (e.g., maintenance, repairs, revaluation...)">{{ inspection.recommendation|default:'' }}</textarea>
+            </div>
+            
+            <!-- Action Required Toggle -->
+            <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                <label class="flex items-center cursor-pointer group">
+                    <input type="checkbox" name="requires_action" value="true" x-model="requiresAction"
+                           {% if inspection and inspection.requires_action %}checked{% endif %}
+                           class="w-5 h-5 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 dark:focus:ring-yellow-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                    <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-yellow-600 transition-colors">
+                        <i class="fas fa-flag-checkered mr-1"></i> Requires Follow-up Action
+                    </span>
+                </label>
+                <p class="text-xs text-gray-500 mt-2 ml-8">
+                    Check this if the inspection found issues that need to be addressed
+                </p>
+            </div>
+            
+            <!-- Next Inspection Date -->
+            <div class="mt-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-calendar-check mr-2 text-blue-500"></i>Next Inspection Date
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-calendar-check text-gray-400"></i>
+                    </div>
+                    <input type="date" name="next_inspection_date" x-model="nextInspectionDate"
+                           value="{{ inspection.next_inspection_date|date:'Y-m-d'|default:'' }}"
+                           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+                <p class="text-xs text-gray-500 mt-1 flex items-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Recommended date for the next inspection (usually 90 days from today)
+                </p>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'collateral:inspections' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-save mr-2"></i>Save Inspection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .animate-shake {
+        animation: shake 0.3s ease-in-out;
+    }
+    
+    /* Focus effects */
+    input:focus, select:focus, textarea:focus {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+</style>
+
+<script>
+function inspectionForm() {
+    return {
+        collateralId: '{% if inspection %}{{ inspection.collateral.id }}{% endif %}',
+        selectedCollateral: null,
+        inspectionType: '{% if inspection %}{{ inspection.inspection_type }}{% else %}initial{% endif %}',
+        inspectionDate: '{% if inspection %}{{ inspection.inspection_date|date:"Y-m-d" }}{% else %}{% now "Y-m-d" %}{% endif %}',
+        condition: '{% if inspection %}{{ inspection.condition }}{% else %}good{% endif %}',
+        notes: '{{ inspection.notes|default:""|escapejs }}',
+        recommendation: '{{ inspection.recommendation|default:""|escapejs }}',
+        requiresAction: {% if inspection and inspection.requires_action %}true{% else %}false{% endif %},
+        nextInspectionDate: '{% if inspection %}{{ inspection.next_inspection_date|date:"Y-m-d" }}{% endif %}',
+        photoPreview: null,
+        errors: [],
+        
+        initForm() {
+            this.updateCollateralInfo();
+        },
+        
+        updateCollateralInfo() {
+            const select = document.querySelector('select[name="collateral"]');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                this.selectedCollateral = {
+                    id: selectedOption.dataset.id,
+                    title: selectedOption.dataset.title,
+                    value: parseFloat(selectedOption.dataset.value) || 0,
+                    client: selectedOption.dataset.client
+                };
+            } else {
+                this.selectedCollateral = null;
+            }
+        },
+        
+        handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+        
+        formatNumber(num) {
+            if (!num) return '0.00';
+            return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        
+        validateForm(event) {
+            this.errors = [];
+            const collateralSelect = document.querySelector('select[name="collateral"]');
+            const notesArea = document.querySelector('textarea[name="notes"]');
+            
+            if (!collateralSelect?.value) {
+                this.errors.push('Please select a collateral');
+            }
+            
+            if (!notesArea?.value.trim()) {
+                this.errors.push('Inspection notes are required');
+            }
+            
+            if (this.errors.length > 0) {
+                event.preventDefault();
+                const errorDiv = document.querySelector('.bg-red-50');
+                if (errorDiv) {
+                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+</script>
+{% endblock %}

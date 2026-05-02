@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+db.sqlite3
+db.sqlite3-journal
+/media/
+/staticfiles/
+/static/
+.DS_Store
+coverage/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.local
+.env.production
+*.key
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backups
+/backups/*.json
+/backups/*.zip
+/backups/*.sql
+
+# Logs
+/logs/*.log
+*.log
+
+# Secret files
+SECRET_KEY.txt

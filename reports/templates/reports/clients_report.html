@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clients Report - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Clients Report</h2>
+                <p class="mt-1 opacity-90">View client demographics and registration trends</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-users text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Clients</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ total_clients }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-users text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Active Clients</p>
+                    <p class="text-2xl font-bold text-green-600">{{ active_clients }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Pending KYC</p>
+                    <p class="text-2xl font-bold text-yellow-600">{{ pending_kyc }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Blacklisted</p>
+                    <p class="text-2xl font-bold text-red-600">{{ blacklisted }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-ban text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- City Distribution -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>Top Cities
+            </h3>
+            <canvas id="cityChart" height="250"></canvas>
+        </div>
+        
+        <!-- Employment Status -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-briefcase mr-2 text-green-500"></i>Employment Status
+            </h3>
+            <canvas id="employmentChart" height="250"></canvas>
+        </div>
+    </div>
+    
+    <!-- Registration Trend -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <i class="fas fa-chart-line mr-2 text-purple-500"></i>Client Registration Trend (Last 30 Days)
+        </h3>
+        <canvas id="registrationChart" height="200"></canvas>
+    </div>
+    
+    <!-- Recent Clients Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                <i class="fas fa-clock mr-2 text-orange-500"></i>Recent Clients
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Client ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">City</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">KYC</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Registered</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    {% for client in recent_clients %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-6 py-4 text-sm font-mono">{{ client.client_id }}</td>
+                        <td class="px-6 py-4 text-sm">{{ client.full_name }}</td>
+                        <td class="px-6 py-4 text-sm">{{ client.city }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full {% if client.status == 'active' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ client.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if client.kyc_verified %}
+                            <span class="text-green-600"><i class="fas fa-check-circle"></i> Verified</span>
+                            {% else %}
+                            <span class="text-red-600"><i class="fas fa-times-circle"></i> Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">{{ client.registration_date|date:"Y-m-d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            No client data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // City Chart
+    const cityCtx = document.getElementById('cityChart');
+    if (cityCtx) {
+        const cityLabels = [{% for city in city_data %}'{{ city.city }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const cityCounts = [{% for city in city_data %}{{ city.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        
+        new Chart(cityCtx, {
+            type: 'bar',
+            data: {
+                labels: cityLabels,
+                datasets: [{
+                    label: 'Number of Clients',
+                    data: cityCounts,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+    
+    // Employment Chart
+    const empCtx = document.getElementById('employmentChart');
+    if (empCtx) {
+        const empLabels = [{% for emp in employment_data %}'{{ emp.status }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const empCounts = [{% for emp in employment_data %}{{ emp.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        
+        new Chart(empCtx, {
+            type: 'doughnut',
+            data: {
+                labels: empLabels,
+                datasets: [{
+                    data: empCounts,
+                    backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    
+    // Registration Trend Chart
+    const regCtx = document.getElementById('registrationChart');
+    if (regCtx) {
+        const regLabels = [{% for day in registration_data %}'{{ day.date|date:"m/d" }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const regCounts = [{% for day in registration_data %}{{ day.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        
+        new Chart(regCtx, {
+            type: 'line',
+            data: {
+                labels: regLabels,
+                datasets: [{
+                    label: 'New Clients',
+                    data: regCounts,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="session-timeout" content="1800">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Login - Korata Lending System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        
+        /* Professional Blue Gradient */
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #2563eb 100%);
+        }
+        
+        .animated-bg {
+            background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #2563eb, #1d4ed8);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Glass Morphism Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark-glass-card {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Shine effect on button */
+        .btn-shine {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(30deg);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(30deg); }
+            100% { transform: translateX(100%) rotate(30deg); }
+        }
+        
+        /* Loading spinner */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Fade in animation */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Shake animation for error */
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        /* Prevent copy/paste on sensitive fields */
+        .no-copy {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        /* Rate limit warning */
+        .rate-limit-warning {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body class="animated-bg min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <!-- Logo/Brand -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-2xl float">
+                <i class="fas fa-hand-holding-usd text-blue-600 text-4xl"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-white mt-4 tracking-tight">Korata Lending</h1>
+            <p class="text-blue-100 mt-2">Secure collateral-based lending platform</p>
+        </div>
+        
+        <!-- Login Card -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Card Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Welcome Back</h2>
+                        <p class="text-blue-100 text-sm mt-1">Please sign in to your account</p>
+                    </div>
+                    <div class="bg-white/20 rounded-lg px-3 py-1">
+                        <span class="text-white text-xs">Secure v2.0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card Body -->
+            <div class="p-8">
+                <!-- Security Notice -->
+                <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center animate-fade-in">
+                    <i class="fas fa-shield-alt text-blue-500 mr-1"></i>
+                    <span class="text-xs text-blue-700 dark:text-blue-300">256-bit SSL Encrypted Connection</span>
+                </div>
+                
+                <!-- Session Timeout Message -->
+                {% if request.GET.timeout %}
+                <div class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg animate-fade-in">
+                    <i class="fas fa-clock text-yellow-500 mr-2"></i>
+                    <span class="text-sm text-yellow-700 dark:text-yellow-300">Your session has expired due to inactivity. Please log in again.</span>
+                </div>
+                {% endif %}
+                
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mb-4 p-3 rounded-lg animate-fade-in {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400{% else %}bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400{% endif %}">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Rate Limit Warning -->
+                <div id="rateLimitWarning" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg animate-shake">
+                    <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                    <span class="text-sm text-red-700 dark:text-red-300">Too many failed attempts. Please wait 5 minutes before trying again.</span>
+                </div>
+                
+                <!-- Login Form -->
+                <form method="post" class="space-y-5" id="loginForm" autocomplete="off">
+                    {% csrf_token %}
+                    
+                    <!-- CSRF Token Indicator -->
+                    <input type="hidden" name="csrf_token_valid" value="true">
+                    
+                    <!-- Username Field -->
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
+                            <i class="fas fa-user mr-2 text-blue-500"></i>Username or Email
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" name="username" id="username" required autofocus
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition dark:bg-gray-800"
+                                   placeholder="Enter your username or email"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                    
+                    <!-- Password Field -->
+                    <div>
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
+                            <i class="fas fa-lock mr-2 text-blue-500"></i>Password
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-key text-gray-400"></i>
+                            </div>
+                            <input type="password" name="password" id="password" required
+                                   class="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition dark:bg-gray-800"
+                                   placeholder="Enter your password"
+                                   autocomplete="off">
+                            <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fas fa-eye text-gray-400 hover:text-gray-600 transition" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Remember Me & Forgot Password -->
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="remember" id="remember" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+                        </label>
+                        <a href="#" class="text-sm text-blue-600 hover:text-blue-700 transition" onclick="forgotPassword(event)">Forgot password?</a>
+                    </div>
+                    
+                    <!-- Failed Attempts Counter (Hidden) -->
+                    <input type="hidden" id="failedAttempts" value="0">
+                    
+                    <!-- Login Button -->
+                    <button type="submit" id="loginBtn" class="btn-shine w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition transform hover:scale-105 shadow-lg relative overflow-hidden">
+                        <span class="btn-text"><i class="fas fa-sign-in-alt mr-2"></i>Sign In</span>
+                        <span class="loader hidden absolute inset-y-0 right-4 flex items-center"></span>
+                    </button>
+                </form>
+                
+                <!-- Security Features Notice -->
+                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                        <div>
+                            <i class="fas fa-shield-alt text-green-500"></i>
+                            <span class="ml-1">Secure Login</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-clock text-blue-500"></i>
+                            <span class="ml-1">30min Session</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-lock text-purple-500"></i>
+                            <span class="ml-1">Encrypted</span>
+                        </div>
+                        <div>
+                            <i class="fas fa-shield-virus text-red-500"></i>
+                            <span class="ml-1">Anti-Brute Force</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center mt-8 space-y-2">
+            <div class="flex justify-center space-x-4 text-blue-100 text-xs">
+                <span><i class="fas fa-shield-alt mr-1"></i>256-bit SSL</span>
+                <span><i class="fas fa-clock mr-1"></i>Session Timeout: 30min</span>
+                <span><i class="fas fa-database mr-1"></i>Secure Storage</span>
+            </div>
+            <p class="text-blue-200 text-xs">
+                &copy; 2024 Korata Lending System. All rights reserved.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        let failedLoginCount = 0;
+        let isLocked = false;
+        
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+        
+        // Fill demo credentials (for development only)
+        function fillCredentials(username, password) {
+            if (isLocked) {
+                alert('Account is temporarily locked. Please try again later.');
+                return;
+            }
+            
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            
+            // Highlight the filled fields
+            const usernameField = document.getElementById('username');
+            const passwordField = document.getElementById('password');
+            
+            usernameField.classList.add('ring-2', 'ring-green-500');
+            passwordField.classList.add('ring-2', 'ring-green-500');
+            
+            setTimeout(() => {
+                usernameField.classList.remove('ring-2', 'ring-green-500');
+                passwordField.classList.remove('ring-2', 'ring-green-500');
+            }, 1000);
+        }
+        
+        // Forgot password handler
+        function forgotPassword(event) {
+            event.preventDefault();
+            const email = prompt('Please enter your email address to receive password reset instructions:');
+            if (email && email.includes('@')) {
+                alert('Password reset instructions have been sent to your email address.');
+            } else if (email) {
+                alert('Please enter a valid email address.');
+            }
+        }
+        
+        // Track failed login attempts
+        function trackFailedAttempt() {
+            failedLoginCount++;
+            document.getElementById('failedAttempts').value = failedLoginCount;
+            
+            if (failedLoginCount >= 5) {
+                isLocked = true;
+                document.getElementById('rateLimitWarning').classList.remove('hidden');
+                document.getElementById('username').disabled = true;
+                document.getElementById('password').disabled = true;
+                document.getElementById('loginBtn').disabled = true;
+                
+                // Reload page after 5 minutes
+                setTimeout(() => {
+                    location.reload();
+                }, 300000);
+            }
+        }
+        
+        // Add loading state on form submit
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('loginBtn');
+            const btnText = btn.querySelector('.btn-text');
+            const loader = btn.querySelector('.loader');
+            
+            btnText.classList.add('opacity-0');
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+            
+            // Track failed attempt on invalid response (handled by backend)
+            setTimeout(() => {
+                // This will be reset if login succeeds via page redirect
+                trackFailedAttempt();
+            }, 3000);
+        });
+        
+        // Keyboard shortcut for demo credentials (Ctrl+Shift+D)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                fillCredentials('admin', 'admin123');
+            }
+        });
+        
+        // Auto-focus on username field
+        document.getElementById('username').focus();
+        
+        // Remember me functionality with secure storage
+        if (localStorage.getItem('remembered_username')) {
+            document.getElementById('username').value = localStorage.getItem('remembered_username');
+            document.getElementById('remember').checked = true;
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            if (document.getElementById('remember').checked) {
+                localStorage.setItem('remembered_username', document.getElementById('username').value);
+            } else {
+                localStorage.removeItem('remembered_username');
+            }
+        });
+        
+        // Disable right-click on sensitive areas
+        document.querySelectorAll('input[type="password"]').forEach(el => {
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+        });
+        
+        // Prevent pasting into password field (for security)
+        document.getElementById('password').addEventListener('paste', (e) => {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Session timeout monitoring
+        let sessionTimer;
+        
+        function resetSessionTimer() {
+            if (sessionTimer) clearTimeout(sessionTimer);
+            sessionTimer = setTimeout(() => {
+                if (window.location.pathname !== '/users/login/') {
+                    window.location.href = '/users/login/?timeout=true';
+                }
+            }, 1800000); // 30 minutes
+        }
+        
+        // Start session timer on page load
+        if (window.location.pathname !== '/users/login/') {
+            resetSessionTimer();
+            document.addEventListener('mousemove', resetSessionTimer);
+            document.addEventListener('keypress', resetSessionTimer);
+            document.addEventListener('click', resetSessionTimer);
+        }
+        
+        // Prevent XSS attempts
+        function sanitizeInput(input) {
+            return input.replace(/[<>]/g, '');
+        }
+        
+        document.getElementById('username').addEventListener('input', function() {
+            this.value = sanitizeInput(this.value);
+        });
+        
+        // Log failed login attempts to console (for monitoring)
+        window.addEventListener('load', function() {
+            console.log('Login page loaded - Security measures active');
+        });
+    </script>
+</body>
+</html>

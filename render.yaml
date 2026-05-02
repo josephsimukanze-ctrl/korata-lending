@@ -1,0 +1,45 @@
+# render.yaml - Minimal version
+
+services:
+  - type: web
+    name: korata-lending
+    runtime: python
+    plan: starter
+    autoDeploy: true
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py migrate --noinput
+      python manage.py collectstatic --noinput
+    startCommand: gunicorn korata_lending.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --threads 2 --timeout 120
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: korata-db
+          property: connectionString
+
+  - type: cron
+    name: korata-cron-daily
+    runtime: python
+    schedule: "0 0 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py process_late_payments
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: korata-db
+          property: connectionString
+
+databases:
+  - name: korata-db
+    plan: starter
+    databaseName: korata_lending
+    user: korata_user
+    postgresMajorVersion: 15

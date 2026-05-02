@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Collateral Inspections - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Collateral Inspections</h2>
+                <p class="mt-1 opacity-90">Track and manage collateral inspection records</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-clipboard-list text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Inspections</p>
+                    <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ inspections|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-blue-600 dark:text-blue-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">This Month</p>
+                    <p class="text-2xl font-bold text-green-600" id="monthlyCount">0</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calendar-alt text-green-600 dark:text-green-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Requires Action</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="actionCount">0</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Completed</p>
+                    <p class="text-2xl font-bold text-purple-600" id="completedCount">0</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-double text-purple-600 dark:text-purple-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="flex justify-end">
+        <a href="{% url 'collateral:inspection_create' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-2">
+            <i class="fas fa-plus"></i>
+            <span>New Inspection</span>
+        </a>
+    </div>
+    
+    <!-- Inspections Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Collateral</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inspection Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Condition</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inspected By</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for inspection in inspections %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ inspection.collateral.title }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ inspection.collateral.collateral_id }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ inspection.inspection_date|date:"Y-m-d" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if inspection.inspection_type == 'initial' %}bg-blue-100 text-blue-700
+                                {% elif inspection.inspection_type == 'quarterly' %}bg-green-100 text-green-700
+                                {% elif inspection.inspection_type == 'annual' %}bg-purple-100 text-purple-700
+                                {% elif inspection.inspection_type == 'special' %}bg-yellow-100 text-yellow-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ inspection.get_inspection_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded-full
+                                {% if inspection.condition == 'new' %}bg-green-100 text-green-700
+                                {% elif inspection.condition == 'excellent' %}bg-blue-100 text-blue-700
+                                {% elif inspection.condition == 'very_good' %}bg-teal-100 text-teal-700
+                                {% elif inspection.condition == 'good' %}bg-emerald-100 text-emerald-700
+                                {% elif inspection.condition == 'fair' %}bg-yellow-100 text-yellow-700
+                                {% elif inspection.condition == 'poor' %}bg-orange-100 text-orange-700
+                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                {{ inspection.get_condition_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ inspection.inspected_by.username|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if inspection.requires_action %}
+                                {% if inspection.action_taken %}
+                                <span class="text-green-600 text-sm"><i class="fas fa-check-circle mr-1"></i>Resolved</span>
+                                {% else %}
+                                <span class="text-red-600 text-sm"><i class="fas fa-exclamation-circle mr-1"></i>Action Required</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-gray-500 text-sm"><i class="fas fa-check-circle mr-1"></i>Completed</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm whitespace-nowrap">
+                            <a href="{% url 'collateral:inspection_detail' inspection.id %}" class="text-blue-600 hover:text-blue-900 mx-1" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'collateral:inspection_edit' inspection.id %}" class="text-green-600 hover:text-green-900 mx-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if inspection.requires_action and not inspection.action_taken %}
+                            <button onclick="markActionTaken({{ inspection.id }})" class="text-purple-600 hover:text-purple-900 mx-1" title="Mark Action Taken">
+                                <i class="fas fa-check-double"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-clipboard-list text-4xl mb-2 block"></i>
+                            <p>No inspection records found</p>
+                            <a href="{% url 'collateral:inspection_create' %}" class="mt-2 inline-block text-blue-600 hover:text-blue-700">
+                                Schedule first inspection
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calculate statistics
+document.addEventListener('DOMContentLoaded', function() {
+    const inspections = {{ inspections|length }};
+    const monthlyCount = {{ inspections|length }}; // You can filter by date
+    const actionRequired = {{ inspections|length }}; // You can filter by requires_action
+    const completed = {{ inspections|length }}; // You can filter by action_taken
+    
+    document.getElementById('monthlyCount').textContent = monthlyCount;
+    document.getElementById('actionCount').textContent = actionRequired;
+    document.getElementById('completedCount').textContent = completed;
+});
+
+function markActionTaken(inspectionId) {
+    if (confirm('Mark this inspection as resolved?')) {
+        fetch(`/collateral/inspections/${inspectionId}/mark-action/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error marking action taken');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

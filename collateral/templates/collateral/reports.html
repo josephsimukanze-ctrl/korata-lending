@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Collateral Reports - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Collateral Reports</h2>
+                <p class="mt-1 opacity-90">Generate comprehensive reports on collateral assets</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-chart-bar text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Options -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Valuation Report Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-chart-line text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-arrow-right text-white opacity-0 group-hover:opacity-100 transition transform group-hover:translate-x-1"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Valuation Report</h3>
+                <p class="text-blue-100 text-sm">Asset values and LTV analysis</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">View detailed valuation reports including estimated values, LTV ratios, and collateral coverage.</p>
+                <a href="{% url 'collateral:valuation_report' %}" class="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium">
+                    Generate Report <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Insurance Report Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-green-500 to-teal-500 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-shield-alt text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-arrow-right text-white opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Insurance Report</h3>
+                <p class="text-green-100 text-sm">Insurance coverage status</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Track insurance status, expiry dates, and coverage amounts for all collateral.</p>
+                <a href="{% url 'collateral:insurance_report' %}" class="inline-flex items-center text-green-600 hover:text-green-700 font-medium">
+                    Generate Report <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Condition Report Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-clipboard-list text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-arrow-right text-white opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Condition Report</h3>
+                <p class="text-yellow-100 text-sm">Asset condition analysis</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Summary of collateral conditions, inspection history, and maintenance needs.</p>
+                <a href="#" class="inline-flex items-center text-yellow-600 hover:text-yellow-700 font-medium" onclick="showComingSoon()">
+                    Generate Report <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Location Report Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-map-marker-alt text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-arrow-right text-white opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Location Report</h3>
+                <p class="text-purple-100 text-sm">Storage and movement tracking</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Asset locations, storage conditions, and movement history.</p>
+                <a href="#" class="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium" onclick="showComingSoon()">
+                    Generate Report <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Summary Report Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-red-500 to-pink-500 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-chart-pie text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-arrow-right text-white opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Summary Report</h3>
+                <p class="text-red-100 text-sm">Overall portfolio summary</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Complete overview of collateral portfolio with key metrics and trends.</p>
+                <a href="#" class="inline-flex items-center text-red-600 hover:text-red-700 font-medium" onclick="showComingSoon()">
+                    Generate Report <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Export Data Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:-translate-y-1 group">
+            <div class="bg-gradient-to-r from-gray-700 to-gray-900 p-4">
+                <div class="flex justify-between items-center">
+                    <i class="fas fa-database text-white text-3xl group-hover:scale-110 transition"></i>
+                    <i class="fas fa-download text-white opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mt-4">Export Data</h3>
+                <p class="text-gray-300 text-sm">CSV and Excel export</p>
+            </div>
+            <div class="p-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Export collateral data to CSV or Excel format for external analysis.</p>
+                <div class="flex space-x-2">
+                    <a href="{% url 'collateral:export_csv' %}" class="flex-1 text-center bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition">
+                        <i class="fas fa-file-csv mr-1"></i> CSV
+                    </a>
+                    <a href="{% url 'collateral:export_excel' %}" class="flex-1 text-center bg-green-600 text-white px-3 py-1.5 rounded text-sm hover:bg-green-700 transition">
+                        <i class="fas fa-file-excel mr-1"></i> Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats with Icons -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Collateral</p>
+                    <p class="text-3xl font-bold text-gray-800 dark:text-white" id="totalCollateral">0</p>
+                    <p class="text-xs text-green-600 mt-1"><i class="fas fa-chart-line"></i> Total items</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-gem text-blue-600 dark:text-blue-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Value</p>
+                    <p class="text-3xl font-bold text-green-600" id="totalValue">ZMW 0</p>
+                    <p class="text-xs text-gray-500 mt-1">Estimated market value</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-600 dark:text-green-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Insured Assets</p>
+                    <p class="text-3xl font-bold text-purple-600" id="insuredCount">0</p>
+                    <p class="text-xs text-gray-500 mt-1">With active insurance</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-purple-600 dark:text-purple-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Verified Assets</p>
+                    <p class="text-3xl font-bold text-emerald-600" id="verifiedCount">0</p>
+                    <p class="text-xs text-gray-500 mt-1">KYC verified</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-300 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Value Distribution Chart -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-pie mr-2 text-blue-500"></i>Value Distribution by Type
+            </h3>
+            <canvas id="valueDistributionChart" height="250"></canvas>
+        </div>
+        
+        <!-- Status Distribution Chart -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-chart-bar mr-2 text-green-500"></i>Status Distribution
+            </h3>
+            <canvas id="statusChart" height="250"></canvas>
+        </div>
+    </div>
+    
+    <!-- Report Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <i class="fas fa-filter mr-2 text-purple-500"></i>Custom Report
+        </h3>
+        <form method="get" action="{% url 'collateral:valuation_report' %}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
+                <input type="date" name="start_date" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
+                <input type="date" name="end_date" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <select name="status" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+                    <option value="">All Status</option>
+                    <option value="available">Available</option>
+                    <option value="pledged">Pledged</option>
+                    <option value="seized">Seized</option>
+                    <option value="sold">Sold</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-chart-line mr-2"></i>Generate Report
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Recent Activity Timeline -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="p-4 border-b dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                <i class="fas fa-history mr-2 text-blue-500"></i>Recent Collateral Activity
+            </h3>
+        </div>
+        <div class="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto" id="recentActivity">
+            <div class="p-8 text-center text-gray-500">
+                <div class="loader mx-auto mb-4"></div>
+                Loading recent activity...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Fetch statistics
+async function fetchStats() {
+    try {
+        const response = await fetch('/collateral/api/stats/');
+        const stats = await response.json();
+        
+        document.getElementById('totalCollateral').textContent = stats.total || 0;
+        document.getElementById('totalValue').textContent = `ZMW ${(stats.total_value || 0).toLocaleString()}`;
+        document.getElementById('insuredCount').textContent = stats.insured || 0;
+        document.getElementById('verifiedCount').textContent = stats.verified || 0;
+        
+        // Update charts with real data
+        updateCharts(stats);
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+    }
+}
+
+// Initialize charts
+let valueChart, statusChart;
+
+function updateCharts(stats) {
+    // Value Distribution Chart
+    const valueCtx = document.getElementById('valueDistributionChart')?.getContext('2d');
+    if (valueCtx) {
+        if (valueChart) valueChart.destroy();
+        valueChart = new Chart(valueCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Available', 'Pledged', 'Seized', 'Sold'],
+                datasets: [{
+                    data: [
+                        stats.available || 0,
+                        stats.pledged || 0,
+                        stats.seized || 0,
+                        stats.sold || 0
+                    ],
+                    backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#8b5cf6'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true, boxWidth: 10 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.raw / total) * 100).toFixed(1);
+                                return `${context.label}: ${context.raw} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusChart')?.getContext('2d');
+    if (statusCtx) {
+        if (statusChart) statusChart.destroy();
+        statusChart = new Chart(statusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Available', 'Pledged', 'Seized', 'Sold'],
+                datasets: [{
+                    label: 'Number of Assets',
+                    data: [
+                        stats.available || 0,
+                        stats.pledged || 0,
+                        stats.seized || 0,
+                        stats.sold || 0
+                    ],
+                    backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#8b5cf6'],
+                    borderRadius: 8,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.raw} assets` } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Number of Assets' } },
+                    x: { title: { display: true, text: 'Status' } }
+                }
+            }
+        });
+    }
+}
+
+// Fetch recent activity
+async function fetchRecentActivity() {
+    try {
+        const response = await fetch('/collateral/api/list/');
+        const data = await response.json();
+        const recentActivity = document.getElementById('recentActivity');
+        
+        if (data.collaterals && data.collaterals.length > 0) {
+            recentActivity.innerHTML = '';
+            data.collaterals.slice(0, 10).forEach(collateral => {
+                const div = document.createElement('div');
+                div.className = 'p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer';
+                div.onclick = () => window.location.href = `/collateral/${collateral.id}/`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center
+                                ${collateral.status === 'available' ? 'bg-green-100 text-green-600' :
+                                  collateral.status === 'pledged' ? 'bg-blue-100 text-blue-600' :
+                                  collateral.status === 'seized' ? 'bg-red-100 text-red-600' :
+                                  'bg-gray-100 text-gray-600'}">
+                                <i class="fas fa-gem"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 dark:text-white">${collateral.title}</p>
+                                <p class="text-xs text-gray-500">${collateral.collateral_id}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-green-600">ZMW ${collateral.estimated_value.toLocaleString()}</p>
+                            <span class="text-xs px-2 py-0.5 rounded-full
+                                ${collateral.status === 'available' ? 'bg-green-100 text-green-700' :
+                                  collateral.status === 'pledged' ? 'bg-blue-100 text-blue-700' :
+                                  collateral.status === 'seized' ? 'bg-red-100 text-red-700' :
+                                  'bg-gray-100 text-gray-700'}">
+                                ${collateral.status}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                recentActivity.appendChild(div);
+            });
+        } else {
+            recentActivity.innerHTML = '<div class="p-8 text-center text-gray-500"><i class="fas fa-inbox text-4xl mb-2 block"></i>No collateral activity found</div>';
+        }
+    } catch (error) {
+        console.error('Error fetching recent activity:', error);
+        recentActivity.innerHTML = '<div class="p-8 text-center text-gray-500"><i class="fas fa-exclamation-triangle text-4xl mb-2 block"></i>Unable to load activity</div>';
+    }
+}
+
+function showComingSoon() {
+    alert('This report is coming soon!');
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    fetchStats();
+    fetchRecentActivity();
+    setInterval(fetchStats, 30000);
+});
+</script>
+
+<style>
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}

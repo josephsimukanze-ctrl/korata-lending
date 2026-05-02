@@ -1,0 +1,86 @@
+<!-- templates/notifications/settings.html -->
+{% extends 'base.html' %}
+
+{% block title %}Notification Settings - Korata{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-6">
+        <a href="{% url 'notifications:list' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Notifications
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white">Notification Preferences</h1>
+            <p class="text-purple-100 mt-1">Choose how you want to receive notifications</p>
+        </div>
+        
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <h3 class="text-lg font-semibold mb-3">Delivery Channels</h3>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="email_notifications" {% if settings.email_notifications %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Email Notifications</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="sms_notifications" {% if settings.sms_notifications %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">SMS Notifications</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="push_notifications" {% if settings.push_notifications %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Push Notifications</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="whatsapp_notifications" {% if settings.whatsapp_notifications %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">WhatsApp Notifications</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-semibold mb-3">Notify Me About</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_payment" {% if settings.notify_payment %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Payments</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_loan" {% if settings.notify_loan %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Loans</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_reminder" {% if settings.notify_reminder %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Reminders</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_alert" {% if settings.notify_alert %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Alerts</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_promotion" {% if settings.notify_promotion %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">Promotions</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="notify_system" {% if settings.notify_system %}checked{% endif %} class="rounded border-gray-300 text-purple-600">
+                        <span class="ml-2">System Updates</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 pt-4">
+                <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition">
+                    <i class="fas fa-save mr-2"></i> Save Preferences
+                </button>
+                <a href="{% url 'notifications:list' %}" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 text-center py-2 rounded-lg transition">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

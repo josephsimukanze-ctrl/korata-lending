@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Loan Agreement - {{ loan.loan_id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                bottom: 0.5cm;
+                margin-left: 2cm;
+                margin-right: 2cm;
+                height: 1cm;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 15px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            letter-spacing: 1px;
+        }
+        
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #1e40af;
+        }
+        
+        .agreement-number {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Section Styles */
+        .section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%);
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #2563eb;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        /* Table Styles */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .details-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .details-table td:first-child {
+            width: 35%;
+            font-weight: bold;
+            background-color: #f9fafb;
+        }
+        
+        .details-table td:last-child {
+            font-weight: normal;
+        }
+        
+        /* Terms Styles */
+        .terms {
+            margin: 15px 0;
+        }
+        
+        .term-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .term-number {
+            font-weight: bold;
+            color: #2563eb;
+            margin-right: 10px;
+        }
+        
+        /* Payment Schedule Table */
+        .payment-schedule {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .payment-schedule th {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .payment-schedule td {
+            padding: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .payment-schedule tr:hover {
+            background-color: #f0f9ff;
+        }
+        
+        /* Signature Section */
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .signature-box {
+            width: 48%;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+        
+        .signature-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .signature-title i {
+            font-size: 18px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin: 20px 0 10px 0;
+            width: 100%;
+        }
+        
+        .signature-image {
+            max-width: 200px;
+            max-height: 80px;
+            margin: 10px auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 5px;
+            background: white;
+        }
+        
+        .signature-image img {
+            max-width: 100%;
+            max-height: 70px;
+            object-fit: contain;
+        }
+        
+        /* Stamp and Verification */
+        .stamp {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #2563eb;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 10px;
+        }
+        
+        .signed-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        /* Additional Styles */
+        .highlight {
+            background-color: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .info-box {
+            background-color: #f0f9ff;
+            border-left: 3px solid #3b82f6;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 10px;
+        }
+        
+        .watermark {
+            position: fixed;
+            opacity: 0.05;
+            font-size: 60px;
+            transform: rotate(-45deg);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        @media print {
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="footer_content">
+        <div class="footer">
+            Korata Lending System | {{ agreement.agreement_number }} | Page <pdf:pagenumber> of <pdf:pagecount>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="logo">KORATA LENDING SYSTEM</div>
+        <div class="title">LOAN AGREEMENT</div>
+        <div class="agreement-number">Agreement No: {{ agreement.agreement_number }}</div>
+        <div class="agreement-number">Date: {{ agreement.agreement_date|date:"F d, Y" }}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. PARTIES TO THE AGREEMENT</div>
+        <table class="details-table">
+            <tr>
+                <td>Lender:</td>
+                <td><strong>Korata Lending System</strong><br>
+                    Plot No. 123, Great East Road<br>
+                    Lusaka, Zambia<br>
+                    Email: info@korata.com<br>
+                    Phone: +260 211 123456<br>
+                    Reg No: 2024/KLS/001
+                </td>
+            </tr>
+            <tr>
+                <td>Borrower:</td>
+                <td>
+                    <strong>{{ loan.client.full_name }}</strong><br>
+                    NRC: {{ loan.client.nrc }}<br>
+                    Phone: {{ loan.client.phone_number }}<br>
+                    Email: {{ loan.client.email|default:"N/A" }}<br>
+                    Physical Address: {{ loan.client.physical_address }}<br>
+                    City: {{ loan.client.city }}, {{ loan.client.province|default:"Lusaka" }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. LOAN DETAILS</div>
+        <table class="details-table">
+            <tr><td>Loan ID:</td><td><strong>{{ loan.loan_id }}</strong></td></tr>
+            <tr><td>Principal Amount:</td><td><strong style="color: #2563eb;">ZMW {{ loan.principal|floatformat:2 }}</strong></td></tr>
+            <tr><td>Interest Rate:</td><td>{{ loan.interest_rate }}% per {{ loan.interest_period }}</td></tr>
+            <tr><td>Loan Duration:</td><td>{{ loan.duration_weeks }} weeks ({{ loan.duration_weeks|divisibleby:4|yesno:"monthly," }} months)</td></tr>
+            <tr><td>Total Interest:</td><td>ZMW {{ loan.total_interest|floatformat:2 }}</td></tr>
+            <tr><td>Total Payback Amount:</td><td><strong style="color: #2563eb;">ZMW {{ loan.total_payback|floatformat:2 }}</strong></td></tr>
+            <tr><td>Weekly Payment:</td><td><strong>ZMW {{ loan.weekly_payment|floatformat:2 }}</strong></td></tr>
+            <tr><td>Start Date:</td><td>{{ loan.start_date|date:"F d, Y"|default:loan.created_at|date:"F d, Y" }}</td></tr>
+            <tr><td>End Date:</td><td>{{ loan.end_date|date:"F d, Y"|default:"TBD" }}</td></tr>
+        </table>
+    </div>
+
+    {% if loan.collateral %}
+    <div class="section">
+        <div class="section-title">3. COLLATERAL INFORMATION</div>
+        <table class="details-table">
+            <tr><td>Asset Type:</td><td>{{ loan.collateral.get_asset_type_display }}</td></tr>
+            <tr><td>Asset Title:</td><td>{{ loan.collateral.title }}</td></tr>
+            <tr><td>Serial Number:</td><td class="highlight">{{ loan.collateral.serial_number }}</td></tr>
+            <tr><td>Estimated Value:</td><td><strong>ZMW {{ loan.collateral.estimated_value|floatformat:2 }}</strong></td></tr>
+            <tr><td>Condition:</td><td>{{ loan.collateral.get_condition_display }}</td></tr>
+            <tr><td>Storage Location:</td><td>{{ loan.collateral.storage_location }}</td></tr>
+        </table>
+        <div class="info-box">
+            <strong>Note:</strong> The collateral is held as security for the loan until full repayment is completed.
+        </div>
+    </div>
+    {% else %}
+    <div class="section">
+        <div class="section-title">3. COLLATERAL INFORMATION</div>
+        <p><em>No collateral provided for this loan. This is an unsecured loan.</em></p>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <div class="section-title">4. TERMS AND CONDITIONS</div>
+        <div class="terms">
+            <div class="term-item"><span class="term-number">4.1</span> The Borrower agrees to repay the loan amount in full according to the payment schedule provided.</div>
+            <div class="term-item"><span class="term-number">4.2</span> Payments must be made on or before the due date. Late payments will incur a penalty fee of 5% of the payment amount.</div>
+            <div class="term-item"><span class="term-number">4.3</span> The Lender reserves the right to seize the collateral in case of default of payment for more than 30 days.</div>
+            <div class="term-item"><span class="term-number">4.4</span> Early repayment is allowed without penalty. Any early repayment will reduce the total interest accrued.</div>
+            <div class="term-item"><span class="term-number">4.5</span> The Borrower must notify the Lender of any change in contact information or employment status.</div>
+            <div class="term-item"><span class="term-number">4.6</span> The Lender may process payments automatically from the Borrower's designated account if authorized.</div>
+            <div class="term-item"><span class="term-number">4.7</span> The Borrower has the right to request a loan statement at any time.</div>
+            <div class="term-item"><span class="term-number">4.8</span> In the event of default, the Borrower shall be responsible for all collection costs and legal fees.</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">5. PAYMENT SCHEDULE</div>
+        {% if payment_schedule %}
+        <table class="payment-schedule">
+            <thead>
+                <tr><th>Week</th><th>Due Date</th><th>Amount Due (ZMW)</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for schedule in payment_schedule|slice:":10" %}
+                <tr>
+                    <td>{{ schedule.week_number }}</td>
+                    <td>{{ schedule.due_date|date:"M d, Y" }}</td>
+                    <td><strong>{{ schedule.expected_amount|floatformat:2 }}</strong></td>
+                    <td>
+                        {% if schedule.status == 'paid' %}✓ Paid
+                        {% elif schedule.status == 'overdue' %}⚠ Overdue
+                        {% else %}Pending{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if payment_schedule|length > 10 %}
+                <tr>
+                    <td colspan="4" style="text-align: center; background-color: #f3f4f6;">
+                        ... and {{ payment_schedule|length|add:"-10" }} more payments
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <div class="info-box">
+            <strong>Payment Instructions:</strong> Payments can be made via bank transfer, mobile money, or in-person at our office.
+            Please reference your Loan ID when making payments.
+        </div>
+        {% else %}
+        <p><em>Payment schedule will be provided separately upon loan activation.</em></p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">6. ACKNOWLEDGMENT</div>
+        <p>The Borrower acknowledges that they have read, understood, and agree to be bound by all the terms and conditions stated in this agreement.</p>
+        <p>The Borrower confirms that all information provided is true and accurate to the best of their knowledge.</p>
+        <p>The Borrower understands that failure to repay the loan may result in legal action and damage to credit rating.</p>
+    </div>
+
+    <!-- Dual Signature Section -->
+    <div class="signature-section">
+        <!-- Borrower Signature -->
+        <div class="signature-box">
+            <div class="signature-title">
+                <span>✍️</span> Borrower's Signature
+            </div>
+            {% if agreement.borrower_signature_image %}
+            <div class="signature-image">
+                <img src="{{ agreement.borrower_signature_image.url }}" alt="Borrower's Signature">
+            </div>
+            <div class="stamp">
+                <strong>Signed by:</strong> {{ agreement.borrower_signed_by.get_full_name|default:loan.client.full_name }}<br>
+                <strong>Date:</strong> {{ agreement.borrower_signed_at|date:"F d, Y H:i" }}<br>
+                <strong>IP Address:</strong> {{ agreement.borrower_ip|default:"Not recorded" }}<br>
+                <strong>Verified:</strong> ✓ Digital Signature
+            </div>
+            {% else %}
+            <div class="signature-line"></div>
+            <div class="stamp">
+                <em>Signature required</em>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Lender/Collateral Officer Signature -->
+        <div class="signature-box">
+            <div class="signature-title">
+                <span>🏦</span> Lender/Collateral Officer's Signature
+            </div>
+            {% if agreement.lender_signature_image %}
+            <div class="signature-image">
+                <img src="{{ agreement.lender_signature_image.url }}" alt="Lender's Signature">
+            </div>
+            <div class="stamp">
+                <strong>Signed by:</strong> {{ agreement.lender_signed_by.get_full_name|default:agreement.lender_signed_by.username }}<br>
+                <strong>Date:</strong> {{ agreement.lender_signed_at|date:"F d, Y H:i" }}<br>
+                <strong>IP Address:</strong> {{ agreement.lender_ip|default:"Not recorded" }}<br>
+                <strong>Position:</strong> Authorized Signatory
+            </div>
+            {% else %}
+            <div class="signature-line"></div>
+            <div class="stamp">
+                Korata Lending System<br>
+                <strong>Authorized Signatory</strong><br>
+                Date: {% now "F d, Y" %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Security Footer -->
+    <div style="margin-top: 30px; text-align: center;">
+        {% if agreement.borrower_signed and agreement.lender_signed %}
+        <div class="signed-badge">
+            ✓ FULLY EXECUTED ON {{ agreement.signed_at|date:"F d, Y H:i" }}
+        </div>
+        {% elif agreement.borrower_signed %}
+        <div class="signed-badge" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            ⚠ PARTIALLY SIGNED - Awaiting Lender Signature
+                        </div>
+        {% elif agreement.lender_signed %}
+        <div class="signed-badge" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            ⚠ PARTIALLY SIGNED - Awaiting Borrower Signature
+        </div>
+        {% else %}
+        <div class="signed-badge" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+            📄 DRAFT - Not Yet Executed
+        </div>
+        {% endif %}
+        
+        <p style="margin-top: 20px; font-size: 10px; color: #6b7280;">
+            This agreement is legally binding once signed by both parties.<br>
+            This document was generated electronically and is valid without a physical signature.
+        </p>
+        
+        <div style="margin-top: 15px; font-size: 8px; color: #9ca3af;">
+            Korata Lending System is licensed and regulated by the Bank of Zambia.<br>
+            Terms and conditions are subject to change with proper notification.
+        </div>
+    </div>
+</body>
+</html>

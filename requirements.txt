@@ -1,0 +1,71 @@
+# requirements.txt - Complete for Render Deployment
+
+# ==================== CORE DJANGO ====================
+Django==4.2.7
+asgiref==3.8.1
+sqlparse==0.5.0
+pytz==2024.1
+typing_extensions==4.12.0
+
+# ==================== DATABASE ====================
+# PostgreSQL for production (Render uses PostgreSQL)
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+
+# ==================== AUTHENTICATION & SECURITY ====================
+djangorestframework==3.15.1
+PyJWT==2.8.0
+django-cors-headers==4.3.1
+
+# ==================== FORMS & UI ====================
+django-crispy-forms==2.1
+crispy-tailwind==1.0.0
+
+# ==================== FILE HANDLING ====================
+Pillow==10.3.0
+qrcode==7.4.2
+pypng==0.20220715.0
+
+# ==================== EXCEL & PDF ====================
+openpyxl==3.1.2
+et-xmlfile==1.1.0
+reportlab==4.2.0
+
+# ==================== HTTP & API ====================
+requests==2.32.3
+urllib3==2.2.2
+certifi==2024.7.4
+charset-normalizer==3.3.2
+idna==3.7
+
+# ==================== SMS & COMMUNICATIONS ====================
+twilio==9.1.0
+africastalking==2.0.0
+
+# ==================== AI & MACHINE LEARNING ====================
+ollama==0.4.0
+openai==1.35.13
+
+# ==================== PRODUCTION DEPLOYMENT ====================
+gunicorn==22.0.0
+whitenoise==6.7.0
+django-storages==1.14.4
+boto3==1.34.144
+
+# ==================== ENVIRONMENT & CONFIGURATION ====================
+python-decouple==3.8
+python-dotenv==1.0.1
+
+# ==================== MONITORING & UTILITIES ====================
+psutil==6.0.0
+python-dateutil==2.9.0.post0
+six==1.16.0
+
+# ==================== LOGGING & DEBUGGING (optional for production) ====================
+# django-silk==5.2.0  # Uncomment if needed for profiling
+
+# ==================== BACKGROUND TASKS (Optional) ====================
+# Note: django-q2 has compatibility issues with Python 3.13
+# Use Celery instead if needed
+# celery==5.4.0
+# redis==5.0.4

@@ -1,0 +1,85 @@
+<!-- templates/backup/restore_confirm.html -->
+{% extends 'base.html' %}
+
+{% block title %}Restore Backup - Korata{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-6">
+        <a href="{% url 'backup:dashboard' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white">
+                <i class="fas fa-exclamation-triangle mr-2"></i>Restore Backup
+            </h1>
+            <p class="text-orange-100 mt-1">This action cannot be undone</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded mb-6">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 text-2xl mr-3"></i>
+                    <div>
+                        <p class="text-red-700 dark:text-red-300 font-bold">WARNING: Data will be overwritten!</p>
+                        <p class="text-sm text-red-600 dark:text-red-400 mt-1">
+                            Restoring this backup will replace all current data. This action is irreversible.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Backup Details:</h3>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Type:</span>
+                        <span class="font-medium text-gray-900 dark:text-white">{{ backup.get_operation_type_display }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Filename:</span>
+                        <span class="font-mono text-sm text-gray-900 dark:text-white">{{ backup.filename }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Size:</span>
+                        <span class="text-gray-900 dark:text-white">{{ backup.file_size|filesizeformat }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Created:</span>
+                        <span class="text-gray-900 dark:text-white">{{ backup.started_at|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600 dark:text-gray-400">Created By:</span>
+                        <span class="text-gray-900 dark:text-white">{{ backup.created_by.username|default:"System" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="confirm" required class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            I understand that this will overwrite all current data
+                        </span>
+                    </label>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg transition">
+                        <i class="fas fa-undo-alt mr-2"></i> Confirm Restore
+                    </button>
+                    <a href="{% url 'backup:dashboard' %}" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 text-center py-3 rounded-lg transition">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

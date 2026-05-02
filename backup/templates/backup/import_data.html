@@ -1,0 +1,67 @@
+<!-- templates/backup/import_data.html -->
+{% extends 'base.html' %}
+
+{% block title %}Import Data - Korata{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-6">
+        <a href="{% url 'backup:dashboard' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-yellow-600 to-yellow-700 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white">
+                <i class="fas fa-upload mr-2"></i>Import Data
+            </h1>
+            <p class="text-yellow-100 mt-1">Import data from backup files</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="mb-6">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="text-blue-700 dark:text-blue-300 text-sm">
+                        <strong>Supported formats:</strong> JSON, CSV, Excel (.xlsx)
+                    </p>
+                    <p class="text-blue-600 dark:text-blue-400 text-sm mt-2">
+                        <strong>Note:</strong> Imported data will be merged with existing data. Existing records with matching IDs will be updated.
+                    </p>
+                </div>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select File</label>
+                        <input type="file" name="import_file" required
+                               accept=".json,.csv,.xlsx"
+                               class="w-full border rounded-lg px-4 py-2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Import Mode</label>
+                        <select name="mode" class="w-full border rounded-lg px-4 py-2">
+                            <option value="merge">Merge (Update existing, Add new)</option>
+                            <option value="replace">Replace (Delete existing, Import new)</option>
+                            <option value="skip">Skip existing (Only add new records)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="submit" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg transition">
+                            <i class="fas fa-upload mr-2"></i> Import Data
+                        </button>
+                        <a href="{% url 'backup:dashboard' %}" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 text-center py-3 rounded-lg transition">
+                            Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

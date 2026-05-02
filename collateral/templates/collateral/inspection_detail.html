@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inspection Details - {{ inspection.collateral.title }}{% endblock %}
+
+{% block content %}
+<div x-data="inspectionDetail()" x-init="init()" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:inspections' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Inspections
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Inspection Details</h2>
+                    <p class="text-blue-100 mt-1 flex items-center">
+                        <i class="fas fa-gem mr-2 text-sm"></i>
+                        {{ inspection.collateral.title }}
+                        <span class="mx-2">•</span>
+                        <span class="font-mono text-sm">{{ inspection.collateral.collateral_id }}</span>
+                    </p>
+                </div>
+                <div>
+                    <span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg
+                        {% if inspection.inspection_type == 'initial' %}bg-gradient-to-r from-blue-500 to-blue-600
+                        {% elif inspection.inspection_type == 'quarterly' %}bg-gradient-to-r from-green-500 to-teal-600
+                        {% elif inspection.inspection_type == 'annual' %}bg-gradient-to-r from-purple-500 to-pink-600
+                        {% else %}bg-gradient-to-r from-yellow-500 to-orange-600{% endif %} text-white">
+                        <i class="fas 
+                            {% if inspection.inspection_type == 'initial' %}fa-clipboard-list
+                            {% elif inspection.inspection_type == 'quarterly' %}fa-calendar-alt
+                            {% elif inspection.inspection_type == 'annual' %}fa-calendar-check
+                            {% else %}fa-star{% endif %} mr-2 text-xs"></i>
+                        {{ inspection.get_inspection_type_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-8">
+            <!-- Stats Cards Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Inspection Date</p>
+                            <p class="text-lg font-bold text-gray-800 dark:text-white mt-1">{{ inspection.inspection_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-calendar-alt text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Inspected By</p>
+                            <p class="text-lg font-bold text-gray-800 dark:text-white mt-1">{{ inspection.inspected_by.get_full_name|default:inspection.inspected_by.username|default:"-" }}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-check text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Condition</p>
+                            <div class="mt-1">
+                                <span class="inline-flex items-center px-2 py-1 text-xs rounded-full
+                                    {% if inspection.condition == 'new' %}bg-green-100 text-green-700
+                                    {% elif inspection.condition == 'excellent' %}bg-blue-100 text-blue-700
+                                    {% elif inspection.condition == 'very_good' %}bg-teal-100 text-teal-700
+                                    {% elif inspection.condition == 'good' %}bg-emerald-100 text-emerald-700
+                                    {% elif inspection.condition == 'fair' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-red-100 text-red-700{% endif %}">
+                                    <i class="fas 
+                                        {% if inspection.condition == 'new' %}fa-star
+                                        {% elif inspection.condition == 'excellent' %}fa-trophy
+                                        {% elif inspection.condition == 'very_good' %}fa-thumbs-up
+                                        {% elif inspection.condition == 'good' %}fa-smile
+                                        {% elif inspection.condition == 'fair' %}fa-meh
+                                        {% else %}fa-frown{% endif %} mr-1 text-xs"></i>
+                                    {{ inspection.get_condition_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Requires Action</p>
+                            <p class="text-lg font-bold mt-1">
+                                {% if inspection.requires_action %}
+                                <span class="text-red-600">Yes</span>
+                                {% else %}
+                                <span class="text-green-600">No</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-flag-checkered text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Collateral Information Card -->
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-5">
+                        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                            Collateral Information
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center py-2 border-b dark:border-gray-600">
+                                <span class="text-gray-600 dark:text-gray-400">Asset Title:</span>
+                                <span class="font-medium text-gray-800 dark:text-white">{{ inspection.collateral.title }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b dark:border-gray-600">
+                                <span class="text-gray-600 dark:text-gray-400">Collateral ID:</span>
+                                <span class="font-mono text-sm text-gray-800 dark:text-white">{{ inspection.collateral.collateral_id }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b dark:border-gray-600">
+                                <span class="text-gray-600 dark:text-gray-400">Client:</span>
+                                <a href="{% url 'clients:client_detail' inspection.collateral.client.id %}" class="text-blue-600 hover:text-blue-800">
+                                    {{ inspection.collateral.client.full_name }}
+                                </a>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b dark:border-gray-600">
+                                <span class="text-gray-600 dark:text-gray-400">Estimated Value:</span>
+                                <span class="font-semibold text-green-600">ZMW {{ inspection.collateral.estimated_value|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="text-gray-600 dark:text-gray-400">Serial Number:</span>
+                                <span class="font-mono text-sm">{{ inspection.collateral.serial_number }}</span>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <a href="{% url 'collateral:detail' inspection.collateral.id %}" class="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center">
+                                View Full Collateral Details <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Follow-up Information -->
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-5">
+                        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-calendar-check mr-2 text-green-500"></i>
+                            Follow-up Information
+                        </h3>
+                        <div class="space-y-3">
+                            {% if inspection.next_inspection_date %}
+                            <div class="flex justify-between items-center py-2 border-b dark:border-gray-600">
+                                <span class="text-gray-600 dark:text-gray-400">Next Inspection:</span>
+                                <span class="font-medium text-blue-600">{{ inspection.next_inspection_date|date:"M d, Y" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if inspection.recommendation %}
+                            <div class="py-2">
+                                <span class="text-gray-600 dark:text-gray-400 block mb-2">Recommendations:</span>
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border-l-4 border-yellow-500">
+                                    <p class="text-gray-700 dark:text-gray-300">{{ inspection.recommendation }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if inspection.action_taken %}
+                            <div class="py-2">
+                                <span class="text-gray-600 dark:text-gray-400 block mb-2">Action Taken:</span>
+                                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border-l-4 border-green-500">
+                                    <p class="text-gray-700 dark:text-gray-300">{{ inspection.action_notes|default:"Action has been completed" }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Inspection Notes -->
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-5">
+                        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-sticky-note mr-2 text-yellow-500"></i>
+                            Inspection Notes
+                        </h3>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-inner">
+                            <p class="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{{ inspection.notes|linebreaks }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Photos -->
+                    {% if inspection.photos %}
+                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-xl p-5">
+                        <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                            <i class="fas fa-camera mr-2 text-purple-500"></i>
+                            Inspection Photos
+                        </h3>
+                        <div class="relative group">
+                            <img src="{{ inspection.photos.url }}" alt="Inspection Photo" 
+                                 class="w-full rounded-xl shadow-lg cursor-pointer transform transition-transform duration-300 hover:scale-105"
+                                 @click="showPhotoModal = true">
+                            <div class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                <i class="fas fa-search-plus mr-1"></i> Click to enlarge
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'collateral:inspections' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Close
+                </a>
+                <a href="{% url 'collateral:inspection_edit' inspection.id %}" class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-edit mr-2"></i>Edit Inspection
+                </a>
+                <button onclick="printInspection()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
+                    <i class="fas fa-print mr-2"></i>Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Photo Modal -->
+    <div x-show="showPhotoModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" style="background-color: rgba(0,0,0,0.9)">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative max-w-4xl w-full">
+                <button @click="showPhotoModal = false" class="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+                <img src="{{ inspection.photos.url }}" alt="Inspection Photo" class="w-full rounded-lg shadow-2xl">
+                <div class="text-white text-center mt-4">
+                    <p class="text-sm">Inspection Photo - {{ inspection.inspection_date|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @media print {
+        header, footer, .sidebar, .action-buttons, button, a, .no-print {
+            display: none !important;
+        }
+        body {
+            background: white;
+            padding: 20px;
+        }
+        .shadow-lg, .shadow-2xl {
+            box-shadow: none !important;
+        }
+    }
+</style>
+
+<script>
+function inspectionDetail() {
+    return {
+        showPhotoModal: false,
+        
+        init() {
+            // Any initialization code
+        }
+    }
+}
+
+function printInspection() {
+    window.print();
+}
+</script>
+{% endblock %}

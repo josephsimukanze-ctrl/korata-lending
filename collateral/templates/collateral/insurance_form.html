@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div x-data="insuranceForm()" x-init="initForm()" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:insurance_list' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Insurance Policies
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">{{ title }}</h2>
+                    <p class="text-blue-100 mt-1 flex items-center">
+                        <i class="fas fa-shield-alt mr-2 text-sm"></i>
+                        Add insurance information for collateral
+                    </p>
+                </div>
+                <div class="hidden md:block">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-shield-alt text-white text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" class="p-8" id="insuranceForm" @submit="validateForm">
+            {% csrf_token %}
+            
+            <!-- Error Messages -->
+            <div x-show="errors.length > 0" x-cloak class="mb-6 animate-shake">
+                <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-500 text-lg"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-semibold text-red-800 dark:text-red-200">Please correct the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <template x-for="error in errors" :key="error">
+                                        <li x-text="error"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Collateral Selection -->
+                <div class="md:col-span-2 group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-gem mr-2 text-blue-500"></i>Collateral <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-gem text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <select name="collateral_id" x-model="collateralId" @change="updateCollateralInfo()" required 
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="">Select Collateral</option>
+                            {% for collateral in collaterals %}
+                            <option value="{{ collateral.id }}" 
+                                    data-title="{{ collateral.title }}"
+                                    data-id="{{ collateral.collateral_id }}"
+                                    data-value="{{ collateral.estimated_value }}"
+                                    data-client="{{ collateral.client.full_name }}"
+                                    {% if selected_collateral and selected_collateral.id == collateral.id %}selected{% endif %}>
+                                {{ collateral.title }} ({{ collateral.collateral_id }}) - {{ collateral.client.full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Collateral Info Card -->
+                    <div x-show="selectedCollateral" x-transition.duration.300ms 
+                         class="mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-blue-800 dark:text-blue-300">Selected Collateral</h4>
+                                <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Title:</span>
+                                        <span class="font-medium text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.title"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">ID:</span>
+                                        <span class="font-mono text-sm text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.id"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Client:</span>
+                                        <span class="text-gray-800 dark:text-white ml-2" x-text="selectedCollateral.client"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600 dark:text-gray-400">Value:</span>
+                                        <span class="font-bold text-green-600 ml-2" x-text="'ZMW ' + formatNumber(selectedCollateral.value)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insurance Provider -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-building mr-2 text-purple-500"></i>Insurance Provider
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-building text-gray-400 group-focus-within:text-purple-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="insurance_provider" x-model="insuranceProvider"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="e.g., Madison Insurance, ZSIC, etc.">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Name of the insurance company</p>
+                </div>
+                
+                <!-- Policy Number -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-hashtag mr-2 text-orange-500"></i>Policy Number
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-hashtag text-gray-400 group-focus-within:text-orange-500 transition-colors"></i>
+                        </div>
+                        <input type="text" name="insurance_policy_number" x-model="policyNumber"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="Enter policy number">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Unique policy identifier from the insurer</p>
+                </div>
+                
+                <!-- Insured Value -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-money-bill-wave mr-2 text-green-500"></i>Insured Value (ZMW)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 font-semibold">ZMW</span>
+                        </div>
+                        <input type="number" name="insurance_value" x-model="insuredValue" step="0.01"
+                               class="w-full pl-16 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-200"
+                               placeholder="0.00">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Amount covered by the insurance policy</p>
+                </div>
+                
+                <!-- Expiry Date -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-calendar-alt mr-2 text-red-500"></i>Expiry Date
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-calendar-alt text-gray-400 group-focus-within:text-red-500 transition-colors"></i>
+                        </div>
+                        <input type="date" name="insurance_expiry_date" x-model="expiryDate"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-all duration-200">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Date when the insurance policy expires</p>
+                </div>
+            </div>
+            
+            <!-- Coverage Summary Card -->
+            <div class="mt-6 p-4 bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                <h3 class="font-semibold text-gray-800 dark:text-white mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-green-500"></i>Coverage Summary
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Collateral Value</p>
+                        <p class="text-lg font-bold text-gray-800 dark:text-white" x-text="formatCurrency(collateralValue)">ZMW 0</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Insured Value</p>
+                        <p class="text-lg font-bold text-blue-600" x-text="formatCurrency(insuredValueNum)">ZMW 0</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Coverage Ratio</p>
+                        <p class="text-lg font-bold" :class="coverageRatio >= 80 ? 'text-green-600' : (coverageRatio >= 50 ? 'text-yellow-600' : 'text-red-600')" x-text="coverageRatio + '%'">0%</p>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Coverage</span>
+                        <span x-text="coverageRatio + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all duration-500" 
+                             :class="coverageRatio >= 80 ? 'bg-green-500' : (coverageRatio >= 50 ? 'bg-yellow-500' : 'bg-red-500')"
+                             :style="'width: ' + coverageRatio + '%'"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 flex items-center">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <span x-show="coverageRatio >= 100">✓ Fully covered</span>
+                        <span x-show="coverageRatio < 100 && coverageRatio >= 80">⚠ Partially covered</span>
+                        <span x-show="coverageRatio < 80">⚠ Low coverage - Consider increasing insured value</span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Days Until Expiry Warning -->
+            <div x-show="daysUntilExpiry <= 30 && daysUntilExpiry > 0" class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border-l-4 border-yellow-500">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-yellow-700 dark:text-yellow-400">Policy Expiring Soon</p>
+                        <p class="text-xs text-yellow-600 dark:text-yellow-500" x-text="'This policy will expire in ' + daysUntilExpiry + ' days (' + formatDate(expiryDate) + ')'"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div x-show="daysUntilExpiry < 0" class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border-l-4 border-red-500">
+                <div class="flex items-center">
+                    <i class="fas fa-times-circle text-red-500 text-xl mr-3"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-red-700 dark:text-red-400">Policy Expired</p>
+                        <p class="text-xs text-red-600 dark:text-red-500" x-text="'This policy expired on ' + formatDate(expiryDate)"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'collateral:insurance_list' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-save mr-2"></i>Save Insurance
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Help Section -->
+    <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        <div class="flex items-start space-x-3">
+            <i class="fas fa-question-circle text-blue-500 text-xl mt-0.5"></i>
+            <div>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Need Help?</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Insurance information helps protect the collateral value. Ensure all details are accurate.
+                    The coverage ratio shows how much of the collateral value is insured.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .animate-shake {
+        animation: shake 0.3s ease-in-out;
+    }
+    
+    input:focus, select:focus {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+</style>
+
+<script>
+function insuranceForm() {
+    return {
+        collateralId: '{% if selected_collateral %}{{ selected_collateral.id }}{% endif %}',
+        selectedCollateral: null,
+        insuranceProvider: '{{ collateral.insurance_provider|default:"" }}',
+        policyNumber: '{{ collateral.insurance_policy_number|default:"" }}',
+        insuredValue: '{{ collateral.insurance_value|default:"" }}',
+        expiryDate: '{{ collateral.insurance_expiry_date|date:"Y-m-d"|default:"" }}',
+        collateralValue: 0,
+        errors: [],
+        
+        initForm() {
+            this.updateCollateralInfo();
+        },
+        
+        updateCollateralInfo() {
+            const select = document.querySelector('select[name="collateral_id"]');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                this.selectedCollateral = {
+                    id: selectedOption.dataset.id,
+                    title: selectedOption.dataset.title,
+                    value: parseFloat(selectedOption.dataset.value) || 0,
+                    client: selectedOption.dataset.client
+                };
+                this.collateralValue = this.selectedCollateral.value;
+            } else {
+                this.selectedCollateral = null;
+                this.collateralValue = 0;
+            }
+        },
+        
+        get insuredValueNum() {
+            return parseFloat(this.insuredValue) || 0;
+        },
+        
+        get coverageRatio() {
+            if (this.collateralValue === 0) return 0;
+            return Math.min(Math.round((this.insuredValueNum / this.collateralValue) * 100), 100);
+        },
+        
+        get daysUntilExpiry() {
+            if (!this.expiryDate) return null;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expiry = new Date(this.expiryDate);
+            expiry.setHours(0, 0, 0, 0);
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        },
+        
+        formatNumber(num) {
+            if (!num) return '0.00';
+            return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        
+        formatCurrency(value) {
+            return `ZMW ${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        
+        validateForm(event) {
+            this.errors = [];
+            const collateralSelect = document.querySelector('select[name="collateral_id"]');
+            
+            if (!collateralSelect?.value) {
+                this.errors.push('Please select a collateral');
+            }
+            
+            if (this.errors.length > 0) {
+                event.preventDefault();
+                const errorDiv = document.querySelector('.bg-red-50');
+                if (errorDiv) {
+                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+</script>
+{% endblock %}

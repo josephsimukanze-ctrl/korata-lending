@@ -1,0 +1,1324 @@
+# notifications/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Notification, NotificationTemplate, UserNotificationSettings
+from users.models import CustomUser
+from notifications.sms_utils import send_sms, send_bulk_sms, SMSTemplates, send_scheduled_sms
+import logging
+
+logger = logging.getLogger(__name__)
+
+def is_admin_or_ceo(user):
+    return user.is_superuser or (hasattr(user, 'role') and user.role in ['ceo', 'admin'])
+
+def is_accountant(user):
+    return user.is_superuser or (hasattr(user, 'role') and user.role in ['ceo', 'admin', 'accountant'])
+
+
+# ==================== MAIN VIEWS ====================
+
+@login_required
+def notification_list(request):
+    """View all notifications with enhanced filtering and real-time updates"""
+    notifications = Notification.objects.filter(user=request.user)
+    
+    # Filter by read status
+    filter_type = request.GET.get('filter', 'all')
+    if filter_type == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif filter_type == 'read':
+        notifications = notifications.filter(is_read=True)
+    
+    # Filter by type
+    type_filter = request.GET.get('type', '')
+    if type_filter:
+        notifications = notifications.filter(notification_type=type_filter)
+    
+    # Filter by priority
+    priority_filter = request.GET.get('priority', '')
+    if priority_filter:
+        notifications = notifications.filter(priority=priority_filter)
+    
+    # Filter by channel (email/sms/push)
+    channel_filter = request.GET.get('channel', '')
+    if channel_filter:
+        notifications = notifications.filter(delivery_channels__contains=channel_filter)
+    
+    # Search
+    search_query = request.GET.get('search', '')
+    if search_query:
+        notifications = notifications.filter(
+            Q(title__icontains=search_query) |
+            Q(message__icontains=search_query)
+        )
+    
+    # Date range filter
+    date_from = request.GET.get('date_from', '')
+    if date_from:
+        notifications = notifications.filter(created_at__date__gte=date_from)
+    date_to = request.GET.get('date_to', '')
+    if date_to:
+        notifications = notifications.filter(created_at__date__lte=date_to)
+    
+    # Pagination
+    items_per_page = int(request.GET.get('per_page', 20))
+    paginator = Paginator(notifications, items_per_page)
+    page = request.GET.get('page', 1)
+    notifications_page = paginator.get_page(page)
+    
+    # Calculate statistics
+    total_unread = Notification.objects.filter(user=request.user, is_read=False).count()
+    urgent_count = Notification.objects.filter(user=request.user, priority='urgent', is_read=False).count()
+    
+    # Get notification type counts
+    type_counts = Notification.objects.filter(user=request.user).values('notification_type').annotate(
+        count=Count('id')
+    )
+    type_count_dict = {item['notification_type']: item['count'] for item in type_counts}
+    
+    context = {
+        'notifications': notifications_page,
+        'filter_type': filter_type,
+        'type_filter': type_filter,
+        'priority_filter': priority_filter,
+        'channel_filter': channel_filter,
+        'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_unread': total_unread,
+        'urgent_count': urgent_count,
+        'type_counts': type_count_dict,
+        'is_admin': is_admin_or_ceo(request.user),
+    }
+    
+    return render(request, 'notifications/list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def create_notification(request):
+    """Create and send notifications with SMS and email integration"""
+    if request.method == 'POST':
+        notification_type = request.POST.get('notification_type', 'info')
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        recipient_type = request.POST.get('recipient_type', 'single')
+        recipient_id = request.POST.get('recipient_id')
+        link = request.POST.get('link', '')
+        priority = request.POST.get('priority', 'medium')
+        schedule_date = request.POST.get('schedule_date')
+        expiry_days = request.POST.get('expiry_days')
+        
+        # Delivery channels
+        send_email_channel = request.POST.get('send_email') == 'on'
+        send_sms_channel = request.POST.get('send_sms') == 'on'
+        send_push_channel = request.POST.get('send_push') == 'on'
+        
+        delivery_channels = []
+        if send_email_channel:
+            delivery_channels.append('email')
+        if send_sms_channel:
+            delivery_channels.append('sms')
+        if send_push_channel:
+            delivery_channels.append('push')
+        
+        # Validate inputs
+        if not title or not message:
+            messages.error(request, 'Title and message are required.')
+            return redirect('notifications:create')
+        
+        if not delivery_channels:
+            messages.error(request, 'Please select at least one delivery channel.')
+            return redirect('notifications:create')
+        
+        # Determine recipients
+        users = []
+        if recipient_type == 'all':
+            users = CustomUser.objects.filter(is_active=True)
+        elif recipient_type == 'role':
+            role = request.POST.get('role')
+            if role:
+                users = CustomUser.objects.filter(role=role, is_active=True)
+            else:
+                messages.error(request, 'Please select a role.')
+                return redirect('notifications:create')
+        elif recipient_type == 'single' and recipient_id:
+            try:
+                user = CustomUser.objects.get(id=recipient_id, is_active=True)
+                users = [user]
+            except CustomUser.DoesNotExist:
+                messages.error(request, 'Selected user does not exist.')
+                return redirect('notifications:create')
+        else:
+            messages.error(request, 'Invalid recipient selection.')
+            return redirect('notifications:create')
+        
+        # Calculate expiry date
+        expires_at = None
+        if expiry_days:
+            expires_at = timezone.now() + timedelta(days=int(expiry_days))
+        
+        # Create notifications and send via selected channels
+        created_count = 0
+        scheduled_count = 0
+        email_sent_count = 0
+        sms_sent_count = 0
+        
+        for user in users:
+            # Get user notification settings
+            settings, _ = UserNotificationSettings.objects.get_or_create(user=user)
+            
+            notification = Notification(
+                user=user,
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                priority=priority,
+                link=link,
+                created_by=request.user,
+                expires_at=expires_at,
+                delivery_channels=','.join(delivery_channels)
+            )
+            
+            if schedule_date:
+                # Scheduled notification
+                notification.is_sent = False
+                notification.scheduled_for = schedule_date
+                scheduled_count += 1
+            else:
+                # Send immediately
+                notification.is_sent = True
+                notification.sent_at = timezone.now()
+                created_count += 1
+                
+                # Send email if enabled and user allows
+                if send_email_channel and settings.email_notifications and user.email:
+                    email_sent = send_email(
+                        to_email=user.email,
+                        subject=title,
+                        template_name='emails/notification_email.html',
+                        context={
+                            'user': user,
+                            'title': title,
+                            'message': message,
+                            'link': link,
+                            'type': notification_type
+                        }
+                    )
+                    if email_sent.get('success'):
+                        email_sent_count += 1
+                        notification.email_sent = True
+                        notification.email_sent_at = timezone.now()
+                
+                # Send SMS if enabled and user allows
+                if send_sms_channel and settings.sms_notifications and user.phone_number:
+                    sms_message = SMSTemplates.custom_notification(title, message)
+                    sms_result = send_sms(user.phone_number, sms_message, 'Korata')
+                    if sms_result.get('success'):
+                        sms_sent_count += 1
+                        notification.sms_sent = True
+                        notification.sms_sent_at = timezone.now()
+                        notification.sms_provider = sms_result.get('provider')
+            
+            notification.save()
+        
+        # Create result message
+        result_msg = []
+        if created_count > 0:
+            result_msg.append(f"{created_count} notification(s) sent")
+        if scheduled_count > 0:
+            result_msg.append(f"{scheduled_count} scheduled")
+        if email_sent_count > 0:
+            result_msg.append(f"{email_sent_count} email(s) delivered")
+        if sms_sent_count > 0:
+            result_msg.append(f"{sms_sent_count} SMS(s) delivered")
+        
+        messages.success(request, f"{', '.join(result_msg)}!")
+        
+        return redirect('notifications:list')
+    
+    users = CustomUser.objects.filter(is_active=True).order_by('username')
+    templates = NotificationTemplate.objects.filter(is_active=True)
+    
+    context = {
+        'users': users,
+        'templates': templates,
+    }
+    return render(request, 'notifications/create.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def send_test_notification(request):
+    """Send test notification to yourself"""
+    if request.method == 'POST':
+        channel = request.POST.get('channel', 'push')
+        phone_number = request.POST.get('phone_number', '')
+        email = request.POST.get('email', '')
+        
+        test_title = "Test Notification from Korata"
+        test_message = "This is a test notification. If you're receiving this, your notification system is working correctly!"
+        
+        results = {}
+        
+        if channel == 'push' or channel == 'all':
+            notification = Notification.objects.create(
+                user=request.user,
+                title=test_title,
+                message=test_message,
+                notification_type='system',
+                priority='medium',
+                created_by=request.user,
+                is_sent=True,
+                sent_at=timezone.now()
+            )
+            results['push'] = {'success': True, 'id': notification.id}
+        
+        if (channel == 'email' or channel == 'all') and email:
+            email_result = send_email(
+                to_email=email,
+                subject=f"Test: {test_title}",
+                template_name='emails/notification_email.html',
+                context={
+                    'user': request.user,
+                    'title': test_title,
+                    'message': test_message,
+                    'type': 'test'
+                }
+            )
+            results['email'] = email_result
+        
+        if (channel == 'sms' or channel == 'all') and phone_number:
+            sms_result = send_sms(phone_number, f"Test: {test_message[:100]}", 'Korata')
+            results['sms'] = sms_result
+        
+        return JsonResponse({
+            'success': True,
+            'results': results
+        })
+    
+    return render(request, 'notifications/test_notification.html')
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def notification_report(request):
+    """Generate notification delivery report"""
+    # Get date range
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    notifications = Notification.objects.all()
+    
+    if date_from:
+        notifications = notifications.filter(created_at__date__gte=date_from)
+    if date_to:
+        notifications = notifications.filter(created_at__date__lte=date_to)
+    
+    # Calculate statistics
+    total_sent = notifications.filter(is_sent=True).count()
+    total_email_sent = notifications.filter(email_sent=True).count()
+    total_sms_sent = notifications.filter(sms_sent=True).count()
+    total_failed = notifications.filter(is_sent=False).count()
+    
+    # Delivery success rates
+    email_success_rate = (total_email_sent / total_sent * 100) if total_sent > 0 else 0
+    sms_success_rate = (total_sms_sent / total_sent * 100) if total_sent > 0 else 0
+    
+    # By channel
+    channel_stats = {
+        'email': {
+            'sent': total_email_sent,
+            'failed': total_sent - total_email_sent,
+            'rate': email_success_rate
+        },
+        'sms': {
+            'sent': total_sms_sent,
+            'failed': total_sent - total_sms_sent,
+            'rate': sms_success_rate
+        }
+    }
+    
+    # Recent delivery failures
+    recent_failures = notifications.filter(is_sent=False).order_by('-created_at')[:20]
+    
+    context = {
+        'total_sent': total_sent,
+        'total_email_sent': total_email_sent,
+        'total_sms_sent': total_sms_sent,
+        'total_failed': total_failed,
+        'email_success_rate': round(email_success_rate, 1),
+        'sms_success_rate': round(sms_success_rate, 1),
+        'channel_stats': channel_stats,
+        'recent_failures': recent_failures,
+        'date_from': date_from,
+        'date_to': date_to,
+        'report_date': timezone.now()
+    }
+    
+    if request.GET.get('format') == 'print':
+        return render(request, 'notifications/report_print.html', context)
+    
+    return render(request, 'notifications/report.html', context)
+
+
+# ==================== EXISTING VIEWS (Keep your existing code below) ====================
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def create_bulk_notification(request):
+    """Create bulk notifications using templates (Existing code)"""
+    if request.method == 'POST':
+        template_id = request.POST.get('template_id')
+        recipient_type = request.POST.get('recipient_type', 'all')
+        role = request.POST.get('role', '')
+        priority = request.POST.get('priority', 'medium')
+        
+        if not template_id:
+            messages.error(request, 'Please select a template.')
+            return redirect('notifications:create')
+        
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+        
+        if recipient_type == 'all':
+            users = CustomUser.objects.filter(is_active=True)
+        elif recipient_type == 'role' and role:
+            users = CustomUser.objects.filter(role=role, is_active=True)
+        else:
+            messages.error(request, 'Invalid recipient selection.')
+            return redirect('notifications:create')
+        
+        created_count = 0
+        for user in users:
+            Notification.objects.create(
+                user=user,
+                title=template.title,
+                message=template.message,
+                notification_type=template.notification_type,
+                priority=priority,
+                created_by=request.user,
+                is_sent=True,
+                sent_at=timezone.now()
+            )
+            created_count += 1
+        
+        messages.success(request, f'Bulk notification sent to {created_count} user(s)!')
+        return redirect('notifications:list')
+    
+    return redirect('notifications:create')
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def manage_templates(request):
+    """Manage notification templates (Existing code)"""
+    templates = NotificationTemplate.objects.all()
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        notification_type = request.POST.get('notification_type')
+        priority = request.POST.get('priority', 'medium')
+        
+        if not name or not title or not message:
+            messages.error(request, 'All fields are required.')
+            return redirect('notifications:templates')
+        
+        NotificationTemplate.objects.create(
+            name=name,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            priority=priority
+        )
+        messages.success(request, 'Template created successfully!')
+        return redirect('notifications:templates')
+    
+    context = {'templates': templates}
+    return render(request, 'notifications/templates.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def delete_template(request, template_id):
+    """Delete a notification template (Existing code)"""
+    if request.method == 'POST':
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+        template.delete()
+        messages.success(request, 'Template deleted successfully!')
+    return redirect('notifications:templates')
+
+
+# ==================== API ENDPOINTS ====================
+
+@login_required
+@require_http_methods(["POST"])
+def mark_as_read(request, notification_id):
+    """Mark a single notification as read (Existing code)"""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_all_read(request):
+    """Mark all notifications as read (Existing code)"""
+    try:
+        updated = Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True, 
+            read_at=timezone.now()
+        )
+        return JsonResponse({'success': True, 'count': updated})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+# notifications/views.py - Updated api_notifications function
+@login_required
+def api_notifications(request):
+    """API endpoint for notifications (AJAX)"""
+    # Get all notifications for the current user
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Get limit parameter
+    try:
+        limit = int(request.GET.get('limit', 50))
+    except ValueError:
+        limit = 50
+    
+    # Apply limit
+    notifications = notifications[:limit]
+    
+    # Prepare data - NO extra fields
+    data = []
+    for n in notifications:
+        data.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'type': n.notification_type,
+            'priority': n.priority,
+            'priority_display': n.get_priority_display(),
+            'is_read': n.is_read,
+            'time_ago': n.time_ago,
+            'created_at': n.created_at.isoformat() if n.created_at else None,
+            'link': n.link,
+        })
+    
+    # Get unread count
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    
+    return JsonResponse({
+        'success': True,
+        'notifications': data,
+        'unread_count': unread_count,
+        'total': notifications.count()
+    })
+
+@login_required
+def api_notification_stats(request):
+    """Get notification statistics (API) (Existing code)"""
+    total = Notification.objects.filter(user=request.user).count()
+    unread = Notification.objects.filter(user=request.user, is_read=False).count()
+    read = total - unread
+    urgent = Notification.objects.filter(user=request.user, priority='urgent', is_read=False).count()
+    
+    # Get counts by type
+    by_type = {}
+    type_counts = Notification.objects.filter(user=request.user).values('notification_type').annotate(count=Count('id'))
+    for item in type_counts:
+        by_type[item['notification_type']] = item['count']
+    
+    # Get counts by priority
+    by_priority = {}
+    priority_counts = Notification.objects.filter(user=request.user).values('priority').annotate(count=Count('id'))
+    for item in priority_counts:
+        by_priority[item['priority']] = item['count']
+    
+    stats = {
+        'total': total,
+        'unread': unread,
+        'read': read,
+        'urgent': urgent,
+        'by_type': by_type,
+        'by_priority': by_priority,
+    }
+    
+    return JsonResponse(stats)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_notification(request, notification_id):
+    """Delete a notification (Existing code)"""
+    if not is_admin_or_ceo(request.user):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    try:
+        notification = get_object_or_404(Notification, id=notification_id)
+        notification.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def get_template_api(request, template_id):
+    """Get template details (API) (Existing code)"""
+    template = get_object_or_404(NotificationTemplate, id=template_id)
+    return JsonResponse({
+        'title': template.title,
+        'message': template.message,
+        'notification_type': template.notification_type,
+        'priority': template.priority
+    })
+
+
+# ==================== USER SETTINGS ====================
+
+@login_required
+def notification_settings(request):
+    """User notification preferences (Existing code)"""
+    settings, created = UserNotificationSettings.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        settings.email_notifications = request.POST.get('email_notifications') == 'on'
+        settings.sms_notifications = request.POST.get('sms_notifications') == 'on'
+        settings.push_notifications = request.POST.get('push_notifications') == 'on'
+        settings.whatsapp_notifications = request.POST.get('whatsapp_notifications') == 'on'
+        
+        settings.notify_payment = request.POST.get('notify_payment') == 'on'
+        settings.notify_loan = request.POST.get('notify_loan') == 'on'
+        settings.notify_reminder = request.POST.get('notify_reminder') == 'on'
+        settings.notify_alert = request.POST.get('notify_alert') == 'on'
+        settings.notify_promotion = request.POST.get('notify_promotion') == 'on'
+        settings.notify_system = request.POST.get('notify_system') == 'on'
+        
+        settings.save()
+        messages.success(request, 'Notification preferences updated!')
+        return redirect('notifications:settings')
+    
+    context = {'settings': settings}
+    return render(request, 'notifications/settings.html', context)
+
+
+# ==================== SCHEDULED NOTIFICATIONS ====================
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def scheduled_notifications(request):
+    """View scheduled notifications (Existing code)"""
+    scheduled = Notification.objects.filter(created_by=request.user, is_sent=False).order_by('scheduled_for')
+    
+    context = {
+        'scheduled': scheduled,
+    }
+    return render(request, 'notifications/scheduled.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def cancel_scheduled(request, notification_id):
+    """Cancel a scheduled notification (Existing code)"""
+    notification = get_object_or_404(Notification, id=notification_id, is_sent=False)
+    
+    if request.method == 'POST':
+        notification.delete()
+        messages.success(request, 'Scheduled notification cancelled.')
+        return redirect('notifications:scheduled')
+    
+    return render(request, 'notifications/cancel_scheduled.html', {'notification': notification})
+
+
+# notifications/views.py - Fixed imports
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Notification, NotificationTemplate, UserNotificationSettings
+from users.models import CustomUser
+from .sms_utils import send_sms, send_bulk_sms, SMSTemplates, send_scheduled_sms
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Optional: If you want email functionality, create email_utils.py
+# For now, we'll create simple email functions here or remove email imports
+
+# Simple email function (temporary)
+def send_email(to_email, subject, template_name=None, context=None):
+    """Simple email sending function - can be expanded later"""
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        # Simple text email for now
+        email_message = context.get('message', '') if context else ''
+        send_mail(
+            subject=subject,
+            message=email_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[to_email],
+            fail_silently=False,
+        )
+        logger.info(f"Email sent to {to_email}: {subject}")
+        return {'success': True, 'provider': 'SMTP'}
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        return {'success': False, 'error': str(e)}
+
+
+def send_bulk_email(to_emails, subject, message):
+    """Send bulk emails"""
+    results = {'successful': 0, 'failed': 0, 'details': []}
+    for email in to_emails:
+        result = send_email(email, subject, None, {'message': message})
+        results['details'].append(result)
+        if result.get('success'):
+            results['successful'] += 1
+        else:
+            results['failed'] += 1
+    return results
+
+
+class EmailTemplates:
+    """Email templates class"""
+    @staticmethod
+    def welcome(user, password):
+        return f"Welcome to Korata! Your username is {user.username} and password is {password}"
+    
+    @staticmethod
+    def custom_notification(title, message):
+        return f"{title}\n\n{message}"
+
+
+def is_admin_or_ceo(user):
+    return user.is_superuser or (hasattr(user, 'role') and user.role in ['ceo', 'admin'])
+
+def is_accountant(user):
+    return user.is_superuser or (hasattr(user, 'role') and user.role in ['ceo', 'admin', 'accountant'])
+
+
+# ==================== MAIN VIEWS ====================
+
+@login_required
+def notification_list(request):
+    """View all notifications with enhanced filtering and real-time updates"""
+    notifications = Notification.objects.filter(user=request.user)
+    
+    # Filter by read status
+    filter_type = request.GET.get('filter', 'all')
+    if filter_type == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif filter_type == 'read':
+        notifications = notifications.filter(is_read=True)
+    
+    # Filter by type
+    type_filter = request.GET.get('type', '')
+    if type_filter:
+        notifications = notifications.filter(notification_type=type_filter)
+    
+    # Filter by priority
+    priority_filter = request.GET.get('priority', '')
+    if priority_filter:
+        notifications = notifications.filter(priority=priority_filter)
+    
+    # Filter by channel (email/sms/push)
+    channel_filter = request.GET.get('channel', '')
+    if channel_filter:
+        notifications = notifications.filter(delivery_channels__contains=channel_filter)
+    
+    # Search
+    search_query = request.GET.get('search', '')
+    if search_query:
+        notifications = notifications.filter(
+            Q(title__icontains=search_query) |
+            Q(message__icontains=search_query)
+        )
+    
+    # Date range filter
+    date_from = request.GET.get('date_from', '')
+    if date_from:
+        notifications = notifications.filter(created_at__date__gte=date_from)
+    date_to = request.GET.get('date_to', '')
+    if date_to:
+        notifications = notifications.filter(created_at__date__lte=date_to)
+    
+    # Pagination
+    items_per_page = int(request.GET.get('per_page', 20))
+    paginator = Paginator(notifications, items_per_page)
+    page = request.GET.get('page', 1)
+    notifications_page = paginator.get_page(page)
+    
+    # Calculate statistics
+    total_unread = Notification.objects.filter(user=request.user, is_read=False).count()
+    urgent_count = Notification.objects.filter(user=request.user, priority='urgent', is_read=False).count()
+    
+    # Get notification type counts
+    type_counts = Notification.objects.filter(user=request.user).values('notification_type').annotate(
+        count=Count('id')
+    )
+    type_count_dict = {item['notification_type']: item['count'] for item in type_counts}
+    
+    context = {
+        'notifications': notifications_page,
+        'filter_type': filter_type,
+        'type_filter': type_filter,
+        'priority_filter': priority_filter,
+        'channel_filter': channel_filter,
+        'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_unread': total_unread,
+        'urgent_count': urgent_count,
+        'type_counts': type_count_dict,
+        'is_admin': is_admin_or_ceo(request.user),
+    }
+    
+    return render(request, 'notifications/list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def create_notification(request):
+    """Create and send notifications with SMS and email integration"""
+    if request.method == 'POST':
+        notification_type = request.POST.get('notification_type', 'info')
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        recipient_type = request.POST.get('recipient_type', 'single')
+        recipient_id = request.POST.get('recipient_id')
+        link = request.POST.get('link', '')
+        priority = request.POST.get('priority', 'medium')
+        schedule_date = request.POST.get('schedule_date')
+        expiry_days = request.POST.get('expiry_days')
+        
+        # Delivery channels
+        send_email_channel = request.POST.get('send_email') == 'on'
+        send_sms_channel = request.POST.get('send_sms') == 'on'
+        send_push_channel = request.POST.get('send_push') == 'on'
+        
+        delivery_channels = []
+        if send_email_channel:
+            delivery_channels.append('email')
+        if send_sms_channel:
+            delivery_channels.append('sms')
+        if send_push_channel:
+            delivery_channels.append('push')
+        
+        # Validate inputs
+        if not title or not message:
+            messages.error(request, 'Title and message are required.')
+            return redirect('notifications:create')
+        
+        if not delivery_channels:
+            messages.error(request, 'Please select at least one delivery channel.')
+            return redirect('notifications:create')
+        
+        # Determine recipients
+        users = []
+        if recipient_type == 'all':
+            users = CustomUser.objects.filter(is_active=True)
+        elif recipient_type == 'role':
+            role = request.POST.get('role')
+            if role:
+                users = CustomUser.objects.filter(role=role, is_active=True)
+            else:
+                messages.error(request, 'Please select a role.')
+                return redirect('notifications:create')
+        elif recipient_type == 'single' and recipient_id:
+            try:
+                user = CustomUser.objects.get(id=recipient_id, is_active=True)
+                users = [user]
+            except CustomUser.DoesNotExist:
+                messages.error(request, 'Selected user does not exist.')
+                return redirect('notifications:create')
+        else:
+            messages.error(request, 'Invalid recipient selection.')
+            return redirect('notifications:create')
+        
+        # Calculate expiry date
+        expires_at = None
+        if expiry_days:
+            expires_at = timezone.now() + timedelta(days=int(expiry_days))
+        
+        # Create notifications and send via selected channels
+        created_count = 0
+        scheduled_count = 0
+        email_sent_count = 0
+        sms_sent_count = 0
+        
+        for user in users:
+            # Get user notification settings
+            settings, _ = UserNotificationSettings.objects.get_or_create(user=user)
+            
+            notification = Notification(
+                user=user,
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                priority=priority,
+                link=link,
+                created_by=request.user,
+                expires_at=expires_at,
+                delivery_channels=','.join(delivery_channels)
+            )
+            
+            if schedule_date:
+                # Scheduled notification
+                notification.is_sent = False
+                notification.scheduled_for = schedule_date
+                scheduled_count += 1
+            else:
+                # Send immediately
+                notification.is_sent = True
+                notification.sent_at = timezone.now()
+                created_count += 1
+                
+                # Send email if enabled and user allows
+                if send_email_channel and settings.email_notifications and user.email:
+                    email_content = f"""
+                    <h2>{title}</h2>
+                    <p>{message}</p>
+                    {f'<a href="{link}">Click here for more details</a>' if link else ''}
+                    """
+                    email_sent = send_email(
+                        to_email=user.email,
+                        subject=title,
+                        template_name=None,
+                        context={'message': email_content}
+                    )
+                    if email_sent.get('success'):
+                        email_sent_count += 1
+                        notification.email_sent = True
+                        notification.email_sent_at = timezone.now()
+                
+                # Send SMS if enabled and user allows
+                if send_sms_channel and settings.sms_notifications and user.phone_number:
+                    sms_message = f"{title[:30]}: {message[:100]}"
+                    sms_result = send_sms(user.phone_number, sms_message, 'Korata')
+                    if sms_result.get('success'):
+                        sms_sent_count += 1
+                        notification.sms_sent = True
+                        notification.sms_sent_at = timezone.now()
+                        notification.sms_provider = sms_result.get('provider')
+            
+            notification.save()
+        
+        # Create result message
+        result_msg = []
+        if created_count > 0:
+            result_msg.append(f"{created_count} notification(s) sent")
+        if scheduled_count > 0:
+            result_msg.append(f"{scheduled_count} scheduled")
+        if email_sent_count > 0:
+            result_msg.append(f"{email_sent_count} email(s) delivered")
+        if sms_sent_count > 0:
+            result_msg.append(f"{sms_sent_count} SMS(s) delivered")
+        
+        messages.success(request, f"{', '.join(result_msg)}!")
+        
+        return redirect('notifications:list')
+    
+    users = CustomUser.objects.filter(is_active=True).order_by('username')
+    templates = NotificationTemplate.objects.filter(is_active=True)
+    
+    context = {
+        'users': users,
+        'templates': templates,
+    }
+    return render(request, 'notifications/create.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def send_test_notification(request):
+    """Send test notification to yourself"""
+    if request.method == 'POST':
+        channel = request.POST.get('channel', 'push')
+        phone_number = request.POST.get('phone_number', '')
+        email = request.POST.get('email', '')
+        
+        test_title = "Test Notification from Korata"
+        test_message = "This is a test notification. If you're receiving this, your notification system is working correctly!"
+        
+        results = {}
+        
+        if channel == 'push' or channel == 'all':
+            notification = Notification.objects.create(
+                user=request.user,
+                title=test_title,
+                message=test_message,
+                notification_type='system',
+                priority='medium',
+                created_by=request.user,
+                is_sent=True,
+                sent_at=timezone.now()
+            )
+            results['push'] = {'success': True, 'id': notification.id}
+        
+        if (channel == 'email' or channel == 'all') and email:
+            email_result = send_email(
+                to_email=email,
+                subject=f"Test: {test_title}",
+                template_name=None,
+                context={'message': test_message}
+            )
+            results['email'] = email_result
+        
+        if (channel == 'sms' or channel == 'all') and phone_number:
+            sms_result = send_sms(phone_number, f"Test: {test_message[:100]}", 'Korata')
+            results['sms'] = sms_result
+        
+        return JsonResponse({
+            'success': True,
+            'results': results
+        })
+    
+    return render(request, 'notifications/test_notification.html')
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def notification_report(request):
+    """Generate notification delivery report"""
+    # Get date range
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    notifications = Notification.objects.all()
+    
+    if date_from:
+        notifications = notifications.filter(created_at__date__gte=date_from)
+    if date_to:
+        notifications = notifications.filter(created_at__date__lte=date_to)
+    
+    # Calculate statistics
+    total_sent = notifications.filter(is_sent=True).count()
+    total_email_sent = notifications.filter(email_sent=True).count()
+    total_sms_sent = notifications.filter(sms_sent=True).count()
+    total_failed = notifications.filter(is_sent=False).count()
+    
+    # Delivery success rates
+    email_success_rate = (total_email_sent / total_sent * 100) if total_sent > 0 else 0
+    sms_success_rate = (total_sms_sent / total_sent * 100) if total_sent > 0 else 0
+    
+    # By channel
+    channel_stats = {
+        'email': {
+            'sent': total_email_sent,
+            'failed': total_sent - total_email_sent,
+            'rate': email_success_rate
+        },
+        'sms': {
+            'sent': total_sms_sent,
+            'failed': total_sent - total_sms_sent,
+            'rate': sms_success_rate
+        }
+    }
+    
+    # Recent delivery failures
+    recent_failures = notifications.filter(is_sent=False).order_by('-created_at')[:20]
+    
+    context = {
+        'total_sent': total_sent,
+        'total_email_sent': total_email_sent,
+        'total_sms_sent': total_sms_sent,
+        'total_failed': total_failed,
+        'email_success_rate': round(email_success_rate, 1),
+        'sms_success_rate': round(sms_success_rate, 1),
+        'channel_stats': channel_stats,
+        'recent_failures': recent_failures,
+        'date_from': date_from,
+        'date_to': date_to,
+        'report_date': timezone.now()
+    }
+    
+    if request.GET.get('format') == 'print':
+        return render(request, 'notifications/report_print.html', context)
+    
+    return render(request, 'notifications/report.html', context)
+
+
+# ==================== EXISTING VIEWS (Keep your existing code below) ====================
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def create_bulk_notification(request):
+    """Create bulk notifications using templates"""
+    if request.method == 'POST':
+        template_id = request.POST.get('template_id')
+        recipient_type = request.POST.get('recipient_type', 'all')
+        role = request.POST.get('role', '')
+        priority = request.POST.get('priority', 'medium')
+        
+        if not template_id:
+            messages.error(request, 'Please select a template.')
+            return redirect('notifications:create')
+        
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+        
+        if recipient_type == 'all':
+            users = CustomUser.objects.filter(is_active=True)
+        elif recipient_type == 'role' and role:
+            users = CustomUser.objects.filter(role=role, is_active=True)
+        else:
+            messages.error(request, 'Invalid recipient selection.')
+            return redirect('notifications:create')
+        
+        created_count = 0
+        for user in users:
+            Notification.objects.create(
+                user=user,
+                title=template.title,
+                message=template.message,
+                notification_type=template.notification_type,
+                priority=priority,
+                created_by=request.user,
+                is_sent=True,
+                sent_at=timezone.now()
+            )
+            created_count += 1
+        
+        messages.success(request, f'Bulk notification sent to {created_count} user(s)!')
+        return redirect('notifications:list')
+    
+    return redirect('notifications:create')
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def manage_templates(request):
+    """Manage notification templates"""
+    templates = NotificationTemplate.objects.all()
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        notification_type = request.POST.get('notification_type')
+        priority = request.POST.get('priority', 'medium')
+        
+        if not name or not title or not message:
+            messages.error(request, 'All fields are required.')
+            return redirect('notifications:templates')
+        
+        NotificationTemplate.objects.create(
+            name=name,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            priority=priority
+        )
+        messages.success(request, 'Template created successfully!')
+        return redirect('notifications:templates')
+    
+    context = {'templates': templates}
+    return render(request, 'notifications/templates.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def delete_template(request, template_id):
+    """Delete a notification template"""
+    if request.method == 'POST':
+        template = get_object_or_404(NotificationTemplate, id=template_id)
+        template.delete()
+        messages.success(request, 'Template deleted successfully!')
+    return redirect('notifications:templates')
+
+
+# ==================== API ENDPOINTS ====================
+
+@login_required
+@require_http_methods(["POST"])
+def mark_as_read(request, notification_id):
+    """Mark a single notification as read"""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_all_read(request):
+    """Mark all notifications as read"""
+    try:
+        updated = Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True, 
+            read_at=timezone.now()
+        )
+        return JsonResponse({'success': True, 'count': updated})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def api_notifications(request):
+    """API endpoint for notifications (AJAX)"""
+    limit = int(request.GET.get('limit', 20))
+    notifications = Notification.objects.filter(user=request.user)[:limit]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    
+    data = []
+    for n in notifications:
+        data.append({
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'type': n.notification_type,
+            'priority': n.priority,
+            'priority_display': n.get_priority_display(),
+            'is_read': n.is_read,
+            'time_ago': n.time_ago,
+            'created_at': n.created_at.isoformat(),
+            'link': n.link,
+            'delivery_channels': n.delivery_channels.split(',') if n.delivery_channels else []
+        })
+    
+    return JsonResponse({
+        'notifications': data,
+        'unread_count': unread_count
+    })
+
+
+@login_required
+def api_notification_stats(request):
+    """Get notification statistics (API)"""
+    total = Notification.objects.filter(user=request.user).count()
+    unread = Notification.objects.filter(user=request.user, is_read=False).count()
+    read = total - unread
+    urgent = Notification.objects.filter(user=request.user, priority='urgent', is_read=False).count()
+    
+    # Get counts by type
+    by_type = {}
+    type_counts = Notification.objects.filter(user=request.user).values('notification_type').annotate(count=Count('id'))
+    for item in type_counts:
+        by_type[item['notification_type']] = item['count']
+    
+    # Get counts by priority
+    by_priority = {}
+    priority_counts = Notification.objects.filter(user=request.user).values('priority').annotate(count=Count('id'))
+    for item in priority_counts:
+        by_priority[item['priority']] = item['count']
+    
+    stats = {
+        'total': total,
+        'unread': unread,
+        'read': read,
+        'urgent': urgent,
+        'by_type': by_type,
+        'by_priority': by_priority,
+    }
+    
+    return JsonResponse(stats)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_notification(request, notification_id):
+    """Delete a notification"""
+    if not is_admin_or_ceo(request.user):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    try:
+        notification = get_object_or_404(Notification, id=notification_id)
+        notification.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+def get_template_api(request, template_id):
+    """Get template details (API)"""
+    template = get_object_or_404(NotificationTemplate, id=template_id)
+    return JsonResponse({
+        'title': template.title,
+        'message': template.message,
+        'notification_type': template.notification_type,
+        'priority': template.priority
+    })
+
+
+# ==================== USER SETTINGS ====================
+
+@login_required
+def notification_settings(request):
+    """User notification preferences"""
+    settings, created = UserNotificationSettings.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        settings.email_notifications = request.POST.get('email_notifications') == 'on'
+        settings.sms_notifications = request.POST.get('sms_notifications') == 'on'
+        settings.push_notifications = request.POST.get('push_notifications') == 'on'
+        settings.whatsapp_notifications = request.POST.get('whatsapp_notifications') == 'on'
+        
+        settings.notify_payment = request.POST.get('notify_payment') == 'on'
+        settings.notify_loan = request.POST.get('notify_loan') == 'on'
+        settings.notify_reminder = request.POST.get('notify_reminder') == 'on'
+        settings.notify_alert = request.POST.get('notify_alert') == 'on'
+        settings.notify_promotion = request.POST.get('notify_promotion') == 'on'
+        settings.notify_system = request.POST.get('notify_system') == 'on'
+        
+        settings.save()
+        messages.success(request, 'Notification preferences updated!')
+        return redirect('notifications:settings')
+    
+    context = {'settings': settings}
+    return render(request, 'notifications/settings.html', context)
+
+
+# ==================== SCHEDULED NOTIFICATIONS ====================
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def scheduled_notifications(request):
+    """View scheduled notifications"""
+    scheduled = Notification.objects.filter(created_by=request.user, is_sent=False).order_by('scheduled_for')
+    
+    context = {
+        'scheduled': scheduled,
+    }
+    return render(request, 'notifications/scheduled.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_ceo)
+def cancel_scheduled(request, notification_id):
+    """Cancel a scheduled notification"""
+    notification = get_object_or_404(Notification, id=notification_id, is_sent=False)
+    
+    if request.method == 'POST':
+        notification.delete()
+        messages.success(request, 'Scheduled notification cancelled.')
+        return redirect('notifications:scheduled')
+    
+    return render(request, 'notifications/cancel_scheduled.html', {'notification': notification})

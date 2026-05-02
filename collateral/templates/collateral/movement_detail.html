@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Movement Details - {{ movement.collateral.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:movements' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Movements
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Movement Details</h2>
+                    <p class="text-blue-100 mt-1">{{ movement.collateral.title }} ({{ movement.collateral.collateral_id }})</p>
+                </div>
+                <div>
+                    <span class="px-3 py-1 rounded-full text-sm font-semibold
+                        {% if movement.movement_type == 'received' %}bg-green-500
+                        {% elif movement.movement_type == 'moved' %}bg-blue-500
+                        {% elif movement.movement_type == 'released' %}bg-purple-500
+                        {% elif movement.movement_type == 'seized' %}bg-red-500
+                        {% else %}bg-yellow-500{% endif %} text-white">
+                        {{ movement.get_movement_type_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold text-gray-800 dark:text-white mb-3">Movement Information</h3>
+                    <div class="space-y-2">
+                        <p><span class="text-gray-500">Movement Date:</span> {{ movement.movement_date|date:"Y-m-d H:i:s" }}</p>
+                        <p><span class="text-gray-500">Moved By:</span> {{ movement.moved_by.username|default:"-" }}</p>
+                        <p><span class="text-gray-500">From:</span> {{ movement.from_location|default:"-" }}</p>
+                        <p><span class="text-gray-500">To:</span> {{ movement.to_location }}</p>
+                        <p><span class="text-gray-500">Reason:</span> {{ movement.reason }}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold text-gray-800 dark:text-white mb-3">Authorization</h3>
+                    <div class="space-y-2">
+                        <p><span class="text-gray-500">Status:</span> 
+                            {% if movement.authorized_by %}
+                            <span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Authorized</span>
+                            {% else %}
+                            <span class="text-yellow-600"><i class="fas fa-clock mr-1"></i>Pending Authorization</span>
+                            {% endif %}
+                        </p>
+                        {% if movement.authorized_by %}
+                        <p><span class="text-gray-500">Authorized By:</span> {{ movement.authorized_by.username }}</p>
+                        <p><span class="text-gray-500">Authorization Date:</span> {{ movement.authorization_date|date:"Y-m-d H:i:s" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if movement.notes %}
+                <div class="md:col-span-2">
+                    <h3 class="font-semibold text-gray-800 dark:text-white mb-3">Additional Notes</h3>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-700 dark:text-gray-300">{{ movement.notes|linebreaks }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                {% if not movement.authorized_by and user.is_superuser or user.role == 'ceo' or user.role == 'admin' %}
+                <button onclick="authorizeMovement({{ movement.id }})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <i class="fas fa-check-circle mr-2"></i>Authorize Movement
+                </button>
+                {% endif %}
+                <a href="{% url 'collateral:movements' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Close
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function authorizeMovement(movementId) {
+    if (confirm('Authorize this movement?')) {
+        fetch(`/collateral/movements/${movementId}/authorize/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error authorizing movement');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

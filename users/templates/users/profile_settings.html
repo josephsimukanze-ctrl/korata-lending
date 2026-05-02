@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile Settings - Korata Lending{% endblock %}
+
+{% block content %}
+<div x-data="profileSettings()" x-init="init()" class="max-w-2xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'users:user_detail' request.user.id %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Profile
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <h2 class="text-xl font-bold text-white">Profile Settings</h2>
+            <p class="text-blue-100 mt-1">Customize your notification preferences and system settings</p>
+        </div>
+        
+        <!-- Display form errors -->
+        {% if form.errors %}
+        <div class="mx-6 mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <strong class="font-bold">Please correct the following errors:</strong>
+            <ul class="mt-2 list-disc list-inside">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <form method="post" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Live Preview Section -->
+            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    <i class="fas fa-eye mr-2 text-blue-500"></i>Live Preview
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Theme:</span>
+                        <span class="font-semibold" x-text="themePreview"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Language:</span>
+                        <span class="font-semibold" x-text="languagePreview"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Timezone:</span>
+                        <span class="font-semibold" x-text="timezonePreview"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Date Format:</span>
+                        <span class="font-semibold" x-text="dateFormatPreview"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Notifications:</span>
+                        <span class="font-semibold" x-text="notificationPreview"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Notification Preferences -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-3 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-bell mr-2 text-orange-500"></i>Notification Preferences
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <label class="flex items-center space-x-3">
+                                    {{ form.email_notifications }}
+                                    <span class="text-gray-700 dark:text-gray-300 font-medium">Email Notifications</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">Receive loan updates and payment reminders via email</p>
+                            </div>
+                            <div class="text-green-500" x-show="emailEnabled">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <label class="flex items-center space-x-3">
+                                    {{ form.sms_notifications }}
+                                    <span class="text-gray-700 dark:text-gray-300 font-medium">SMS Notifications</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">Receive important alerts via SMS</p>
+                            </div>
+                            <div class="text-green-500" x-show="smsEnabled">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <label class="flex items-center space-x-3">
+                                    {{ form.whatsapp_notifications }}
+                                    <span class="text-gray-700 dark:text-gray-300 font-medium">WhatsApp Notifications</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">Get instant notifications on WhatsApp</p>
+                            </div>
+                            <div class="text-green-500" x-show="whatsappEnabled">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <label class="flex items-center space-x-3">
+                                    {{ form.push_notifications }}
+                                    <span class="text-gray-700 dark:text-gray-300 font-medium">Push Notifications</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">Receive browser push notifications</p>
+                            </div>
+                            <div class="text-green-500" x-show="pushEnabled">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Display Preferences -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-3 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-palette mr-2 text-purple-500"></i>Display Preferences
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-language mr-1"></i>Language
+                            </label>
+                            {{ form.language }}
+                            {% if form.language.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.language.errors.0 }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">Affects all text in the system</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-clock mr-1"></i>Timezone
+                            </label>
+                            {{ form.timezone }}
+                            {% if form.timezone.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.timezone.errors.0 }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">All dates will be shown in this timezone</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-calendar-alt mr-1"></i>Date Format
+                            </label>
+                            {{ form.date_format }}
+                            {% if form.date_format.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.date_format.errors.0 }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">How dates are displayed</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-moon mr-1"></i>Theme
+                            </label>
+                            {{ form.theme }}
+                            {% if form.theme.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.theme.errors.0 }}</p>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">Changes the entire system appearance</p>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="flex items-center space-x-3">
+                                {{ form.sidebar_collapsed }}
+                                <span class="text-gray-700 dark:text-gray-300">
+                                    <i class="fas fa-bars mr-1"></i>Keep sidebar collapsed by default
+                                </span>
+                            </label>
+                            {% if form.sidebar_collapsed.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.sidebar_collapsed.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Effects Info -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                        <i class="fas fa-info-circle mr-1"></i>How These Settings Affect the System
+                    </h4>
+                    <ul class="text-xs text-blue-700 dark:text-blue-400 space-y-1 ml-4 list-disc">
+                        <li>Theme changes the entire interface (light/dark mode)</li>
+                        <li>Language updates all text throughout the system</li>
+                        <li>Timezone affects all dates and times displayed</li>
+                        <li>Notification settings control which alerts you receive</li>
+                        <li>Changes take effect immediately after saving</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                <a href="{% url 'users:user_detail' request.user.id %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i>Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function profileSettings() {
+    return {
+        emailEnabled: {{ form.email_notifications.value|default:'false'|lower }},
+        smsEnabled: {{ form.sms_notifications.value|default:'false'|lower }},
+        whatsappEnabled: {{ form.whatsapp_notifications.value|default:'false'|lower }},
+        pushEnabled: {{ form.push_notifications.value|default:'false'|lower }},
+        themePreview: '',
+        languagePreview: '',
+        timezonePreview: '',
+        dateFormatPreview: '',
+        notificationPreview: '',
+        
+        init() {
+            this.updatePreview();
+            
+            // Watch for changes
+            const emailCheckbox = document.querySelector('#id_email_notifications');
+            const smsCheckbox = document.querySelector('#id_sms_notifications');
+            const whatsappCheckbox = document.querySelector('#id_whatsapp_notifications');
+            const pushCheckbox = document.querySelector('#id_push_notifications');
+            const languageSelect = document.querySelector('#id_language');
+            const timezoneSelect = document.querySelector('#id_timezone');
+            const themeSelect = document.querySelector('#id_theme');
+            const dateFormatSelect = document.querySelector('#id_date_format');
+            
+            if (emailCheckbox) emailCheckbox.addEventListener('change', () => {
+                this.emailEnabled = emailCheckbox.checked;
+                this.updatePreview();
+            });
+            if (smsCheckbox) smsCheckbox.addEventListener('change', () => {
+                this.smsEnabled = smsCheckbox.checked;
+                this.updatePreview();
+            });
+            if (whatsappCheckbox) whatsappCheckbox.addEventListener('change', () => {
+                this.whatsappEnabled = whatsappCheckbox.checked;
+                this.updatePreview();
+            });
+            if (pushCheckbox) pushCheckbox.addEventListener('change', () => {
+                this.pushEnabled = pushCheckbox.checked;
+                this.updatePreview();
+            });
+            if (languageSelect) languageSelect.addEventListener('change', () => this.updatePreview());
+            if (timezoneSelect) timezoneSelect.addEventListener('change', () => this.updatePreview());
+            if (themeSelect) themeSelect.addEventListener('change', () => this.updatePreview());
+            if (dateFormatSelect) dateFormatSelect.addEventListener('change', () => this.updatePreview());
+        },
+        
+        updatePreview() {
+            const languageSelect = document.querySelector('#id_language');
+            const timezoneSelect = document.querySelector('#id_timezone');
+            const themeSelect = document.querySelector('#id_theme');
+            const dateFormatSelect = document.querySelector('#id_date_format');
+            
+            const languages = {
+                'en': 'English',
+                'fr': 'French',
+                'sw': 'Swahili'
+            };
+            
+            const themes = {
+                'light': 'Light Mode',
+                'dark': 'Dark Mode',
+                'auto': 'Auto (Follow System)'
+            };
+            
+            const dateFormats = {
+                'Y-m-d': 'YYYY-MM-DD',
+                'd/m/Y': 'DD/MM/YYYY',
+                'm/d/Y': 'MM/DD/YYYY',
+                'd M Y': 'DD Mon YYYY'
+            };
+            
+            this.languagePreview = languages[languageSelect?.value] || 'English';
+            this.timezonePreview = timezoneSelect?.options[timezoneSelect.selectedIndex]?.text || 'Africa/Lusaka';
+            this.themePreview = themes[themeSelect?.value] || 'Light Mode';
+            this.dateFormatPreview = dateFormats[dateFormatSelect?.value] || 'YYYY-MM-DD';
+            
+            let notificationCount = 0;
+            if (this.emailEnabled) notificationCount++;
+            if (this.smsEnabled) notificationCount++;
+            if (this.whatsappEnabled) notificationCount++;
+            if (this.pushEnabled) notificationCount++;
+            
+            this.notificationPreview = `${notificationCount} enabled`;
+        }
+    }
+}
+</script>
+{% endblock %}

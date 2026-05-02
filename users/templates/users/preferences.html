@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Preferences - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div x-data="preferencesForm()" x-init="initForm()" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div class="mb-6">
+        <a href="{% url 'users:profile' %}" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-all duration-200 group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Back to Profile
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <!-- Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-8 py-6">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-white opacity-10 rounded-full"></div>
+            
+            <div class="relative flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">User Preferences</h2>
+                    <p class="text-purple-100 mt-1 flex items-center">
+                        <i class="fas fa-sliders-h mr-2 text-sm"></i>
+                        Customize your experience
+                    </p>
+                </div>
+                <div class="hidden md:block">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
+                        <i class="fas fa-sliders-h text-white text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" class="p-8" id="preferencesForm">
+            {% csrf_token %}
+            
+            <!-- Success Message -->
+            <div x-show="showSuccess" x-cloak x-transition.duration.300ms class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+                    <span class="text-green-700 dark:text-green-300">Preferences updated successfully!</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Theme Selection -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-palette mr-2 text-purple-500"></i>Theme
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-palette text-gray-400 group-focus-within:text-purple-500 transition-colors"></i>
+                        </div>
+                        <select name="theme" x-model="theme" @change="updateTheme()" 
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="light">☀️ Light Mode</option>
+                            <option value="dark">🌙 Dark Mode</option>
+                            <option value="auto">🔄 Auto (Follow System)</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Choose your preferred color scheme</p>
+                </div>
+                
+                <!-- Language Selection -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-language mr-2 text-blue-500"></i>Language
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-language text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <select name="language" x-model="language"
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="en">🇬🇧 English</option>
+                            <option value="fr">🇫🇷 French</option>
+                            <option value="sw">🇹🇿 Swahili</option>
+                            <option value="pt">🇵🇹 Portuguese</option>
+                            <option value="zh">🇨🇳 Chinese</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timezone -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-globe mr-2 text-green-500"></i>Timezone
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-globe text-gray-400 group-focus-within:text-green-500 transition-colors"></i>
+                        </div>
+                        <select name="timezone" x-model="timezone"
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="Africa/Lusaka">🇿🇲 Lusaka (GMT+2)</option>
+                            <option value="Africa/Johannesburg">🇿🇦 Johannesburg (GMT+2)</option>
+                            <option value="Africa/Nairobi">🇰🇪 Nairobi (GMT+3)</option>
+                            <option value="Africa/Lagos">🇳🇬 Lagos (GMT+1)</option>
+                            <option value="Africa/Cairo">🇪🇬 Cairo (GMT+2)</option>
+                            <option value="Africa/Casablanca">🇲🇦 Casablanca (GMT+1)</option>
+                            <option value="UTC">🌐 UTC</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Date Format -->
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-calendar-alt mr-2 text-orange-500"></i>Date Format
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-calendar-alt text-gray-400 group-focus-within:text-orange-500 transition-colors"></i>
+                        </div>
+                        <select name="date_format" x-model="dateFormat"
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white appearance-none">
+                            <option value="Y-m-d">YYYY-MM-DD</option>
+                            <option value="d/m/Y">DD/MM/YYYY</option>
+                            <option value="m/d/Y">MM/DD/YYYY</option>
+                            <option value="d M Y">DD Mon YYYY</option>
+                            <option value="F j, Y">Month DD, YYYY</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Example: <span x-text="dateExample"></span></p>
+                </div>
+                
+                <!-- Sidebar Preference -->
+                <div class="md:col-span-2">
+                    <label class="flex items-center cursor-pointer group p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <input type="checkbox" name="sidebar_collapsed" x-model="sidebarCollapsed"
+                               class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-purple-600 transition-colors">
+                            <i class="fas fa-bars mr-2"></i>Keep sidebar collapsed by default
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Notification Preferences -->
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-bell mr-2 text-yellow-500"></i>Notification Preferences
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="flex items-center cursor-pointer group p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <input type="checkbox" name="email_notifications" x-model="emailNotifications"
+                               class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                        <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-envelope mr-2 text-blue-500"></i>Email Notifications
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center cursor-pointer group p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <input type="checkbox" name="sms_notifications" x-model="smsNotifications"
+                               class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                        <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-mobile-alt mr-2 text-green-500"></i>SMS Notifications
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center cursor-pointer group p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <input type="checkbox" name="push_notifications" x-model="pushNotifications"
+                               class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                        <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-bell mr-2 text-purple-500"></i>Push Notifications
+                        </span>
+                    </label>
+                    
+                    <label class="flex items-center cursor-pointer group p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                        <input type="checkbox" name="whatsapp_notifications" x-model="whatsappNotifications"
+                               class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                        <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                            <i class="fab fa-whatsapp mr-2 text-green-600"></i>WhatsApp Notifications
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="{% url 'users:profile' %}" class="px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium">
+                    <i class="fas fa-save mr-2"></i>Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Reset Preferences -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="border-l-4 border-yellow-500 p-6">
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                        <i class="fas fa-undo-alt text-yellow-600 dark:text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-1">Reset Preferences</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Reset all preferences to their default values.</p>
+                    <button type="button" onclick="resetPreferences()" class="inline-flex items-center px-5 py-2.5 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 transition-all duration-200">
+                        <i class="fas fa-undo-alt mr-2"></i> Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script>
+function preferencesForm() {
+    return {
+        showSuccess: false,
+        theme: 'light',
+        language: 'en',
+        timezone: 'Africa/Lusaka',
+        dateFormat: 'Y-m-d',
+        sidebarCollapsed: false,
+        emailNotifications: true,
+        smsNotifications: false,
+        pushNotifications: true,
+        whatsappNotifications: false,
+        
+        initForm() {
+            // Load existing preferences
+            this.loadPreferences();
+            this.updateTheme();
+        },
+        
+        loadPreferences() {
+            // Load from localStorage or server
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) this.theme = savedTheme;
+            
+            // Load other preferences from server via AJAX
+            fetch('/users/api/preferences/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.language) this.language = data.language;
+                    if (data.timezone) this.timezone = data.timezone;
+                    if (data.date_format) this.dateFormat = data.date_format;
+                    if (data.sidebar_collapsed !== undefined) this.sidebarCollapsed = data.sidebar_collapsed;
+                    if (data.email_notifications !== undefined) this.emailNotifications = data.email_notifications;
+                    if (data.sms_notifications !== undefined) this.smsNotifications = data.sms_notifications;
+                    if (data.push_notifications !== undefined) this.pushNotifications = data.push_notifications;
+                    if (data.whatsapp_notifications !== undefined) this.whatsappNotifications = data.whatsapp_notifications;
+                })
+                .catch(error => console.error('Error loading preferences:', error));
+        },
+        
+        updateTheme() {
+            if (this.theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else if (this.theme === 'light') {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                // Auto - follow system preference
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('theme', 'auto');
+            }
+        },
+        
+        get dateExample() {
+            const date = new Date();
+            if (this.dateFormat === 'Y-m-d') {
+                return date.toISOString().split('T')[0];
+            } else if (this.dateFormat === 'd/m/Y') {
+                return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+            } else if (this.dateFormat === 'm/d/Y') {
+                return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+            } else if (this.dateFormat === 'd M Y') {
+                return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+            } else {
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+        }
+    }
+}
+
+function resetPreferences() {
+    if (confirm('Are you sure you want to reset all preferences to default values?')) {
+        fetch('/users/api/reset-preferences/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  location.reload();
+              } else {
+                  alert('Error resetting preferences');
+              }
+          });
+    }
+}
+</script>
+{% endblock %}

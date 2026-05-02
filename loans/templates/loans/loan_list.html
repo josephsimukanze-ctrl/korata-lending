@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Loans - Korata Lending{% endblock %}
+
+{% block content %}
+<div x-data="loanManagement()" x-init="init()" class="fade-in">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Loan Management</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Manage all loan applications and track repayments</p>
+        </div>
+        <div class="flex space-x-3">
+            <a href="{% url 'loans:loan_calculator' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2">
+                <i class="fas fa-calculator"></i>
+                <span>Calculator</span>
+            </a>
+            <a href="{% url 'loans:loan_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2">
+                <i class="fas fa-plus"></i>
+                <span>New Loan</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Loans</p>
+                    <p class="text-2xl font-bold text-gray-800 dark:text-white" x-text="stats.total">{{ stats.total|default:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-file-invoice-dollar text-blue-600 dark:text-blue-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Active Loans</p>
+                    <p class="text-2xl font-bold text-green-600" x-text="stats.active">{{ stats.active|default:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 dark:text-green-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Pending Approval</p>
+                    <p class="text-2xl font-bold text-yellow-600" x-text="stats.pending">{{ stats.pending|default:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 dark:text-yellow-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Completed</p>
+                    <p class="text-2xl font-bold text-purple-600" x-text="stats.completed">{{ stats.completed|default:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-double text-purple-600 dark:text-purple-300"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Defaulted</p>
+                    <p class="text-2xl font-bold text-red-600" x-text="stats.defaulted">{{ stats.defaulted|default:0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filter Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-search mr-1"></i> Search
+                </label>
+                <input type="text" x-model="searchQuery" @input="debouncedFilter()" 
+                       placeholder="Search by loan ID or client name..." 
+                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-tag mr-1"></i> Status
+                </label>
+                <select x-model="statusFilter" @change="filterLoans()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">All Status</option>
+                    <option value="pending">⏳ Pending Approval</option>
+                    <option value="approved">✅ Approved</option>
+                    <option value="active">🟢 Active</option>
+                    <option value="completed">🎯 Completed</option>
+                    <option value="defaulted">⚠️ Defaulted</option>
+                    <option value="rejected">❌ Rejected</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-chart-line mr-1"></i> Overdue
+                </label>
+                <select x-model="overdueFilter" @change="filterLoans()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">All Loans</option>
+                    <option value="overdue">🔴 Overdue Only</option>
+                    <option value="not_overdue">🟢 Not Overdue</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button @click="clearFilters()" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-eraser mr-2"></i>Clear Filters
+                </button>
+            </div>
+        </div>
+        
+        <!-- Active Filters Display -->
+        <div class="flex flex-wrap gap-2 mt-4" x-show="hasActiveFilters()">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
+            <span x-show="searchQuery" class="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                Search: <span x-text="searchQuery"></span>
+                <button @click="searchQuery = ''; filterLoans()" class="ml-1 hover:text-blue-900">&times;</button>
+            </span>
+            <span x-show="statusFilter" class="inline-flex items-center px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">
+                Status: <span x-text="statusFilter"></span>
+                <button @click="statusFilter = ''; filterLoans()" class="ml-1 hover:text-purple-900">&times;</button>
+            </span>
+            <span x-show="overdueFilter" class="inline-flex items-center px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">
+                Overdue: <span x-text="overdueFilter"></span>
+                <button @click="overdueFilter = ''; filterLoans()" class="ml-1 hover:text-yellow-900">&times;</button>
+            </span>
+        </div>
+    </div>
+    
+    <!-- Loans Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Loan ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Client</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Principal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Payback</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Remaining</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Progress</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <template x-for="loan in paginatedLoans" :key="loan.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
+                            :class="{'bg-red-50 dark:bg-red-900/20': loan.status === 'defaulted', 'bg-yellow-50 dark:bg-yellow-900/20': loan.is_overdue && loan.status === 'active'}">
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-sm font-medium text-gray-900 dark:text-white" x-text="loan.loan_id"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="loan.client_name"></div>
+                                <div class="text-xs text-gray-500" x-text="loan.client_id"></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                ZMW <span x-text="formatNumber(loan.principal)"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                ZMW <span x-text="formatNumber(loan.total_payback)"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm font-semibold" :class="loan.remaining_balance > 0 ? 'text-red-600' : 'text-green-600'">
+                                ZMW <span x-text="formatNumber(loan.remaining_balance)"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="getStatusClass(loan.status)">
+                                    <i class="fas mr-1" :class="getStatusIcon(loan.status)"></i>
+                                    <span x-text="getStatusDisplay(loan.status)"></span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" 
+                                             :class="getProgressColor(loan.progress)"
+                                             :style="'width: ' + (loan.progress || 0) + '%'"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500" x-text="(loan.progress || 0).toFixed(0) + '%'"></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                <span x-text="formatDate(loan.created_at)"></span>
+                            </td>
+                            <td class="px-6 py-4 text-right text-sm whitespace-nowrap">
+                                <div class="flex justify-end space-x-1">
+                                    <a :href="'/loans/' + loan.id + '/'" class="text-blue-600 hover:text-blue-900 p-1" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a :href="'/loans/' + loan.id + '/make-payment/'" class="text-green-600 hover:text-green-900 p-1" title="Make Payment" x-show="loan.status === 'active'">
+                                        <i class="fas fa-credit-card"></i>
+                                    </a>
+                                    <a :href="'/loans/' + loan.id + '/approve/'" class="text-purple-600 hover:text-purple-900 p-1" title="Approve" x-show="loan.status === 'pending'">
+                                        <i class="fas fa-check-circle"></i>
+                                    </a>
+                                    <a :href="'/auction/create/' + loan.id + '/'" class="text-orange-600 hover:text-orange-900 p-1" title="Create Auction" x-show="loan.status === 'defaulted'">
+                                        <i class="fas fa-gavel"></i>
+                                    </a>
+                                    <a :href="'/loans/' + loan.id + '/edit/'" class="text-yellow-600 hover:text-yellow-900 p-1" title="Edit" x-show="loan.status === 'pending'">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="filteredLoans.length === 0">
+                        <td colspan="9" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-file-invoice-dollar text-5xl mb-3 block text-gray-300 dark:text-gray-600"></i>
+                            <p class="text-lg">No loans found</p>
+                            <p class="text-sm mt-1">Try adjusting your search or filters</p>
+                            <a href="{% url 'loans:loan_create' %}" class="mt-3 inline-block text-blue-600 hover:text-blue-700">
+                                <i class="fas fa-plus-circle mr-1"></i> Create your first loan
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="px-6 py-4 border-t dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span x-text="((currentPage - 1) * itemsPerPage) + 1"></span> to 
+                <span x-text="Math.min(currentPage * itemsPerPage, filteredLoans.length)"></span> of 
+                <span x-text="filteredLoans.length"></span> loans
+            </div>
+            <div class="flex space-x-2">
+                <button @click="firstPage" :disabled="currentPage === 1" 
+                        class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button @click="previousPage" :disabled="currentPage === 1" 
+                        class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="flex items-center space-x-1">
+                    <template x-for="page in getPageNumbers()" :key="page">
+                        <button @click="goToPage(page)" 
+                                :class="{'bg-blue-600 text-white': currentPage === page, 'border hover:bg-gray-50 dark:hover:bg-gray-700': currentPage !== page}"
+                                class="w-8 h-8 text-sm rounded-lg transition"
+                                x-text="page">
+                        </button>
+                    </template>
+                </div>
+                <button @click="nextPage" :disabled="currentPage === totalPages" 
+                        class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button @click="lastPage" :disabled="currentPage === totalPages" 
+                        class="px-3 py-1 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div x-show="loading" class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0,0,0,0.3)">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span class="text-gray-700 dark:text-gray-300">Loading loans...</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+function loanManagement() {
+    return {
+        loans: [],
+        filteredLoans: [],
+        searchQuery: '',
+        statusFilter: '',
+        overdueFilter: '',
+        currentPage: 1,
+        itemsPerPage: 10,
+        loading: false,
+        searchTimeout: null,
+        
+        stats: {
+            total: {{ stats.total|default:0 }},
+            active: {{ stats.active|default:0 }},
+            pending: {{ stats.pending|default:0 }},
+            completed: {{ stats.completed|default:0 }},
+            defaulted: {{ stats.defaulted|default:0 }},
+            total_disbursed: {{ stats.total_disbursed|default:0 }}
+        },
+        
+        init() {
+            // Load initial loans from Django template data
+            const initialLoans = {{ loans_json|safe|default:'[]' }};
+            
+            if (initialLoans.length > 0) {
+                this.loans = initialLoans;
+                this.filterLoans();
+            } else {
+                this.fetchLoans();
+            }
+            
+            // Still fetch stats for real-time updates
+            this.fetchStats();
+        },
+        
+        fetchLoans() {
+            this.loading = true;
+            fetch('/loans/api/list/')
+                .then(response => response.json())
+                .then(data => {
+                    this.loans = data.loans.map(loan => ({
+                        ...loan,
+                        progress: this.calculateProgress(loan)
+                    }));
+                    this.filterLoans();
+                    this.loading = false;
+                })
+                .catch(error => {
+                    console.error('Error fetching loans:', error);
+                    this.loading = false;
+                });
+        },
+        
+        fetchStats() {
+            fetch('/loans/api/stats/')
+                .then(response => response.json())
+                .then(data => {
+                    this.stats = { ...this.stats, ...data };
+                })
+                .catch(error => console.error('Error fetching stats:', error));
+        },
+        
+        calculateProgress(loan) {
+            if (!loan.total_payback || loan.total_payback <= 0) return 0;
+            const paid = loan.total_payback - loan.remaining_balance;
+            return (paid / loan.total_payback) * 100;
+        },
+        
+        debouncedFilter() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.filterLoans();
+            }, 300);
+        },
+        
+        filterLoans() {
+            let filtered = [...this.loans];
+            
+            if (this.searchQuery) {
+                const search = this.searchQuery.toLowerCase();
+                filtered = filtered.filter(loan => 
+                    (loan.loan_id && loan.loan_id.toLowerCase().includes(search)) ||
+                    (loan.client_name && loan.client_name.toLowerCase().includes(search))
+                );
+            }
+            
+            if (this.statusFilter) {
+                filtered = filtered.filter(loan => loan.status === this.statusFilter);
+            }
+            
+            if (this.overdueFilter === 'overdue') {
+                filtered = filtered.filter(loan => loan.is_overdue === true);
+            }
+            if (this.overdueFilter === 'not_overdue') {
+                filtered = filtered.filter(loan => loan.is_overdue === false);
+            }
+            
+            this.filteredLoans = filtered;
+            this.currentPage = 1;
+        },
+        
+        hasActiveFilters() {
+            return this.searchQuery || this.statusFilter || this.overdueFilter;
+        },
+        
+        clearFilters() {
+            this.searchQuery = '';
+            this.statusFilter = '';
+            this.overdueFilter = '';
+            this.filterLoans();
+        },
+        
+        get paginatedLoans() {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return this.filteredLoans.slice(start, end);
+        },
+        
+        get totalPages() {
+            return Math.ceil(this.filteredLoans.length / this.itemsPerPage);
+        },
+        
+        getPageNumbers() {
+            const total = this.totalPages;
+            const current = this.currentPage;
+            const pages = [];
+            
+            if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i);
+            } else {
+                if (current <= 3) {
+                    for (let i = 1; i <= 5; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(total);
+                } else if (current >= total - 2) {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = total - 4; i <= total; i++) pages.push(i);
+                } else {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(total);
+                }
+            }
+            return pages;
+        },
+        
+        firstPage() { this.currentPage = 1; },
+        lastPage() { this.currentPage = this.totalPages; },
+        previousPage() { if (this.currentPage > 1) this.currentPage--; },
+        nextPage() { if (this.currentPage < this.totalPages) this.currentPage++; },
+        goToPage(page) { if (page !== '...') this.currentPage = page; },
+        
+        getStatusDisplay(status) {
+            const statuses = {
+                'pending': 'Pending',
+                'approved': 'Approved',
+                'active': 'Active',
+                'completed': 'Completed',
+                'defaulted': 'Defaulted',
+                'rejected': 'Rejected'
+            };
+            return statuses[status] || status || 'Pending';
+        },
+        
+        getStatusClass(status) {
+            const classes = {
+                'pending': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                'approved': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                'active': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                'completed': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                'defaulted': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                'rejected': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-700';
+        },
+        
+        getStatusIcon(status) {
+            const icons = {
+                'pending': 'fa-clock',
+                'approved': 'fa-check-circle',
+                'active': 'fa-play-circle',
+                'completed': 'fa-check-double',
+                'defaulted': 'fa-exclamation-triangle',
+                'rejected': 'fa-times-circle'
+            };
+            return icons[status] || 'fa-circle';
+        },
+        
+        getProgressColor(progress) {
+            if (progress >= 80) return 'bg-green-500';
+            if (progress >= 50) return 'bg-blue-500';
+            if (progress >= 25) return 'bg-yellow-500';
+            return 'bg-red-500';
+        },
+        
+        formatNumber(num) {
+            if (!num && num !== 0) return '0.00';
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return 'N/A';
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

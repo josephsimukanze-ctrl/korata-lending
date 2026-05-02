@@ -1,0 +1,519 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Collateral{% endblock %}
+
+{% block content %}
+<div x-data="collateralForm()" x-init="initForm()" class="max-w-4xl mx-auto fade-in">
+    <div class="mb-6">
+        <a href="{% url 'collateral:list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Collateral
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">{{ title }}</h2>
+                    <p class="text-blue-100 mt-1 text-sm">Fill in the collateral information below</p>
+                </div>
+                {% if collateral %}
+                <div class="bg-white/20 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm">{{ collateral.collateral_id }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-6" @submit="validateForm">
+            {% csrf_token %}
+            
+            <div class="space-y-6">
+                <!-- Basic Information Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>Basic Information
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Client <span class="text-red-500">*</span>
+                            </label>
+                            <select name="client" id="id_client" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                <option value="">-- Select Client --</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}" {% if collateral and collateral.client.id == client.id %}selected{% endif %}>
+                                    {{ client.full_name }} ({{ client.client_id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Asset Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Asset Type <span class="text-red-500">*</span>
+                            </label>
+                            <select name="asset_type" id="id_asset_type" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                <option value="">-- Select Asset Type --</option>
+                                {% for type in asset_types %}
+                                <option value="{{ type.id }}" {% if collateral and collateral.asset_type.id == type.id %}selected{% endif %}>
+                                    {{ type.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Title -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Asset Title <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="title" id="id_title" required
+                                   value="{{ collateral.title|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., Toyota Hilux 2020, Diamond Ring, Laptop">
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Description
+                            </label>
+                            <textarea name="description" id="id_description" rows="3"
+                                      class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                      placeholder="Detailed description of the asset...">{{ collateral.description|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Asset Details Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-car mr-2 text-green-500"></i>Asset Details
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Make / Brand
+                            </label>
+                            <input type="text" name="make" id="id_make"
+                                   value="{{ collateral.make|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., Toyota, Samsung, Rolex">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Model
+                            </label>
+                            <input type="text" name="model" id="id_model"
+                                   value="{{ collateral.model|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., Hilux, Galaxy S21, Submariner">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Year
+                            </label>
+                            <input type="number" name="year" id="id_year" min="1900" max="2025"
+                                   value="{{ collateral.year|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., 2020">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Color
+                            </label>
+                            <input type="text" name="color" id="id_color"
+                                   value="{{ collateral.color|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., Black, White, Silver">
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Serial Number <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="serial_number" id="id_serial_number" required
+                                   value="{{ collateral.serial_number|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Unique serial number">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Valuation Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-chart-line mr-2 text-purple-500"></i>Valuation
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Condition <span class="text-red-500">*</span>
+                            </label>
+                            <select name="condition" id="id_condition" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                                <option value="new" {% if collateral and collateral.condition == 'new' %}selected{% endif %}>🆕 New</option>
+                                <option value="excellent" {% if collateral and collateral.condition == 'excellent' %}selected{% endif %}>⭐ Excellent</option>
+                                <option value="very_good" {% if collateral and collateral.condition == 'very_good' %}selected{% endif %}>✅ Very Good</option>
+                                <option value="good" {% if collateral and collateral.condition == 'good' %}selected{% endif %}>👍 Good</option>
+                                <option value="fair" {% if collateral and collateral.condition == 'fair' %}selected{% endif %}>⚠️ Fair</option>
+                                <option value="poor" {% if collateral and collateral.condition == 'poor' %}selected{% endif %}>🔻 Poor</option>
+                                <option value="damaged" {% if collateral and collateral.condition == 'damaged' %}selected{% endif %}>💔 Damaged</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Estimated Value (ZMW) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">ZMW</span>
+                                <input type="number" name="estimated_value" id="id_estimated_value" step="0.01" required
+                                       value="{{ collateral.estimated_value|default:'' }}"
+                                       class="w-full pl-12 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                       placeholder="0.00">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                LTV Ratio (%)
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <input type="range" name="ltv_ratio" min="0" max="100" value="{{ collateral.loan_to_value_ratio|default:70 }}"
+                                       class="flex-1" id="ltvRange">
+                                <input type="number" name="loan_to_value_ratio" value="{{ collateral.loan_to_value_ratio|default:70 }}"
+                                       class="w-20 px-2 py-2 border rounded-lg text-center" id="ltvValue" step="5">
+                                <span class="text-gray-500">%</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Max Loan Amount
+                            </label>
+                            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 text-center">
+                                <span class="text-sm text-gray-500">Estimated:</span>
+                                <span class="font-bold text-green-600" id="maxLoanAmount">ZMW 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Location Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>Storage Location
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Storage Location <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="storage_location" id="id_storage_location" required
+                                   value="{{ collateral.storage_location|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="e.g., Main Warehouse, Safe Room A, Vault">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Section
+                            </label>
+                            <input type="text" name="storage_section" id="id_storage_section"
+                                   value="{{ collateral.storage_section|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Section A, Row B">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Shelf / Rack
+                            </label>
+                            <input type="text" name="storage_shelf" id="id_storage_shelf"
+                                   value="{{ collateral.storage_shelf|default:'' }}"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Shelf 3, Rack 2">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Documents Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-file-alt mr-2 text-yellow-500"></i>Documents & Photos
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Primary Photo
+                            </label>
+                            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-blue-500 transition">
+                                <input type="file" name="primary_photo" accept="image/*" class="hidden" id="primaryPhoto">
+                                <label for="primaryPhoto" class="cursor-pointer block">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2 block"></i>
+                                    <span class="text-gray-500">Click to upload photo</span>
+                                </label>
+                                <div id="primaryPhotoPreview" class="mt-2 hidden">
+                                    <img src="" class="max-h-32 mx-auto rounded">
+                                    <button type="button" onclick="clearPhoto()" class="text-red-500 text-sm mt-1">Remove</button>
+                                </div>
+                            </div>
+                            {% if collateral and collateral.primary_photo %}
+                            <div class="mt-2">
+                                <img src="{{ collateral.primary_photo.url }}" class="h-20 rounded">
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Certificate of Ownership
+                            </label>
+                            <input type="file" name="certificate_of_ownership"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Valuation Certificate
+                            </label>
+                            <input type="file" name="valuation_certificate"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Insurance Certificate
+                            </label>
+                            <input type="file" name="insurance_certificate"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insurance Section -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b dark:border-gray-700">
+                        <i class="fas fa-shield-alt mr-2 text-blue-500"></i>Insurance Information
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="is_insured" id="isInsured" value="true" 
+                                       {% if collateral and collateral.is_insured %}checked{% endif %}
+                                       class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">Asset is insured</span>
+                            </label>
+                        </div>
+                        
+                        <div id="insuranceFields" class="{% if not collateral or not collateral.is_insured %}hidden{% endif %} md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Insurance Provider
+                                </label>
+                                <input type="text" name="insurance_provider"
+                                       value="{{ collateral.insurance_provider|default:'' }}"
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                       placeholder="e.g., Madison Insurance">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Policy Number
+                                </label>
+                                <input type="text" name="insurance_policy_number"
+                                       value="{{ collateral.insurance_policy_number|default:'' }}"
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Insured Value (ZMW)
+                                </label>
+                                <input type="number" name="insurance_value" step="0.01"
+                                       value="{{ collateral.insurance_value|default:'' }}"
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Expiry Date
+                                </label>
+                                <input type="date" name="insurance_expiry_date"
+                                       value="{{ collateral.insurance_expiry_date|date:'Y-m-d'|default:'' }}"
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Additional Notes
+                    </label>
+                    <textarea name="notes" id="id_notes" rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="Any additional information about the collateral...">{{ collateral.notes|default:'' }}</textarea>
+                </div>
+                
+                <!-- Tags -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tags
+                    </label>
+                    <input type="text" name="tags" id="id_tags"
+                           value="{{ collateral.tags|default:'' }}"
+                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                           placeholder="Comma-separated tags (e.g., vehicle, high-value, electronics)">
+                    <p class="text-xs text-gray-500 mt-1">Separate tags with commas for easy searching</p>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t dark:border-gray-700">
+                <a href="{% url 'collateral:list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition dark:border-gray-600 dark:text-gray-300">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i>Save Collateral
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function collateralForm() {
+    return {
+        initForm() {
+            // LTV calculator
+            const valueInput = document.getElementById('id_estimated_value');
+            const ltvRange = document.getElementById('ltvRange');
+            const ltvValue = document.getElementById('ltvValue');
+            const maxLoanSpan = document.getElementById('maxLoanAmount');
+            
+            function calculateMaxLoan() {
+                const value = parseFloat(valueInput?.value) || 0;
+                const ltv = parseFloat(ltvValue?.value) || 70;
+                const maxLoan = value * (ltv / 100);
+                if (maxLoanSpan) {
+                    maxLoanSpan.textContent = `ZMW ${maxLoan.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+                }
+            }
+            
+            if (valueInput) {
+                valueInput.addEventListener('input', calculateMaxLoan);
+                calculateMaxLoan();
+            }
+            
+            if (ltvRange && ltvValue) {
+                ltvRange.addEventListener('input', function() {
+                    ltvValue.value = this.value;
+                    calculateMaxLoan();
+                });
+                ltvValue.addEventListener('input', function() {
+                    ltvRange.value = this.value;
+                    calculateMaxLoan();
+                });
+            }
+            
+            // Insurance toggle
+            const isInsuredCheckbox = document.getElementById('isInsured');
+            const insuranceFields = document.getElementById('insuranceFields');
+            
+            if (isInsuredCheckbox && insuranceFields) {
+                isInsuredCheckbox.addEventListener('change', function() {
+                    insuranceFields.classList.toggle('hidden', !this.checked);
+                });
+            }
+            
+            // Photo preview
+            const photoInput = document.getElementById('primaryPhoto');
+            const photoPreview = document.getElementById('primaryPhotoPreview');
+            const previewImg = photoPreview?.querySelector('img');
+            
+            if (photoInput && photoPreview && previewImg) {
+                photoInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            previewImg.src = event.target.result;
+                            photoPreview.classList.remove('hidden');
+                            photoInput.previousElementSibling?.classList.add('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        },
+        
+        validateForm(event) {
+            const client = document.getElementById('id_client')?.value;
+            const assetType = document.getElementById('id_asset_type')?.value;
+            const title = document.getElementById('id_title')?.value;
+            const serialNumber = document.getElementById('id_serial_number')?.value;
+            const estimatedValue = document.getElementById('id_estimated_value')?.value;
+            const storageLocation = document.getElementById('id_storage_location')?.value;
+            
+            if (!client) {
+                event.preventDefault();
+                alert('Please select a client');
+                return false;
+            }
+            
+            if (!assetType) {
+                event.preventDefault();
+                alert('Please select an asset type');
+                return false;
+            }
+            
+            if (!title) {
+                event.preventDefault();
+                alert('Please enter the asset title');
+                return false;
+            }
+            
+            if (!serialNumber) {
+                event.preventDefault();
+                alert('Please enter the serial number');
+                return false;
+            }
+            
+            if (!estimatedValue || parseFloat(estimatedValue) <= 0) {
+                event.preventDefault();
+                alert('Please enter a valid estimated value');
+                return false;
+            }
+            
+            if (!storageLocation) {
+                event.preventDefault();
+                alert('Please enter the storage location');
+                return false;
+            }
+            
+            return true;
+        }
+    }
+}
+
+function clearPhoto() {
+    const photoInput = document.getElementById('primaryPhoto');
+    const photoPreview = document.getElementById('primaryPhotoPreview');
+    if (photoInput) photoInput.value = '';
+    if (photoPreview) photoPreview.classList.add('hidden');
+}
+</script>
+{% endblock %}

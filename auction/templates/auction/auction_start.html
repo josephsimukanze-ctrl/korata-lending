@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Start Auction{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto text-center">
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold mb-4">Start Auction</h2>
+        <p>Are you sure you want to start auction <strong>{{ auction.auction_id }}</strong>?</p>
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg">Yes, Start Auction</button>
+            <a href="{% url 'auction:detail' auction.id %}" class="ml-2 px-4 py-2 border rounded-lg">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Loan Calculator - Korata Lending{% endblock %}
+
+{% block content %}
+<div x-data="loanCalculator()" x-init="initCalculator()" class="max-w-5xl mx-auto fade-in">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Loan Calculator</h2>
+                    <p class="text-blue-100 mt-1">Calculate your loan payments instantly - updates as you type</p>
+                </div>
+                <div class="bg-white/20 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm">Powered by Korata</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Input Form -->
+                <div class="space-y-5">
+                    <!-- Loan Amount -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Loan Amount (ZMW)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">ZMW</span>
+                            <input type="number" x-model="amount" @input="calculate()" 
+                                   class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <input type="range" x-model="amount" @input="calculate()" min="0" max="100000" step="1000"
+                               class="w-full mt-2">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>ZMW 0</span>
+                            <span>ZMW 25k</span>
+                            <span>ZMW 50k</span>
+                            <span>ZMW 75k</span>
+                            <span>ZMW 100k</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Interest Rate -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Interest Rate (%)
+                        </label>
+                        <div class="flex space-x-2">
+                            <input type="number" x-model="rate" @input="calculate()" step="0.5"
+                                   class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            <span class="flex items-center text-gray-500">%</span>
+                        </div>
+                        <input type="range" x-model="rate" @input="calculate()" min="0" max="50" step="0.5"
+                               class="w-full mt-2">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>0%</span>
+                            <span>10%</span>
+                            <span>20%</span>
+                            <span>30%</span>
+                            <span>40%</span>
+                            <span>50%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Period Type Toggle -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Repayment Period
+                        </label>
+                        <div class="flex space-x-2">
+                            <button @click="periodType = 'week'; calculate()"
+                                    :class="periodType === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                    class="flex-1 py-3 rounded-lg transition-colors font-semibold">
+                                <i class="fas fa-calendar-week mr-2"></i> Weekly
+                            </button>
+                            <button @click="periodType = 'month'; calculate()"
+                                    :class="periodType === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                    class="flex-1 py-3 rounded-lg transition-colors font-semibold">
+                                <i class="fas fa-calendar-alt mr-2"></i> Monthly
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Duration -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Duration (<span x-text="periodType === 'week' ? 'Weeks' : 'Months'"></span>)
+                        </label>
+                        <div class="flex space-x-2">
+                            <input type="number" x-model="duration" @input="calculate()"
+                                   class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                            <span class="flex items-center text-gray-500" x-text="periodType === 'week' ? 'weeks' : 'months'"></span>
+                        </div>
+                        <input type="range" x-model="duration" @input="calculate()" :min="1" :max="periodType === 'week' ? 52 : 24"
+                               class="w-full mt-2">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span x-text="'1 ' + (periodType === 'week' ? 'week' : 'month')"></span>
+                            <span x-text="periodType === 'week' ? '13 weeks' : '6 months'"></span>
+                            <span x-text="periodType === 'week' ? '26 weeks' : '12 months'"></span>
+                            <span x-text="periodType === 'week' ? '39 weeks' : '18 months'"></span>
+                            <span x-text="periodType === 'week' ? '52 weeks' : '24 months'"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Presets -->
+                    <div class="pt-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Quick Presets
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" @click="setPreset(10000, 10, 12)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                ZMW 10k
+                            </button>
+                            <button type="button" @click="setPreset(25000, 10, 24)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                ZMW 25k
+                            </button>
+                            <button type="button" @click="setPreset(50000, 12, 36)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                ZMW 50k
+                            </button>
+                            <button type="button" @click="setPreset(100000, 15, 48)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                ZMW 100k
+                            </button>
+                            <button type="button" @click="setPreset(20000, 8, 52)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                Low Rate
+                            </button>
+                            <button type="button" @click="setPreset(30000, 20, 26)" class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                Short Term
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results -->
+                <div class="bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-chart-line mr-2 text-blue-500"></i>Loan Summary
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center pb-3 border-b dark:border-gray-600">
+                            <span class="text-gray-600 dark:text-gray-400">Principal Amount:</span>
+                            <span class="text-xl font-bold text-gray-800 dark:text-white">ZMW <span x-text="formatNumber(principal)">0</span></span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pb-3 border-b dark:border-gray-600">
+                            <span class="text-gray-600 dark:text-gray-400">Total Interest:</span>
+                            <span class="text-xl font-bold text-blue-600">ZMW <span x-text="formatNumber(totalInterest)">0</span></span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pb-3 border-b dark:border-gray-600">
+                            <span class="text-gray-600 dark:text-gray-400">Total Payback:</span>
+                            <span class="text-xl font-bold text-green-600">ZMW <span x-text="formatNumber(totalPayback)">0</span></span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-calendar-check mr-1 text-purple-500"></i>
+                                <span x-text="periodType === 'week' ? 'Weekly' : 'Monthly'"></span> Payment:
+                            </span>
+                            <span class="text-2xl font-bold text-purple-600">ZMW <span x-text="formatNumber(installment)">0</span></span>
+                        </div>
+                        
+                        <!-- Additional Info -->
+                        <div class="mt-4 pt-4 border-t dark:border-gray-600">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Total Payments:</span>
+                                <span class="font-semibold" x-text="periodType === 'week' ? duration + ' payments' : duration + ' payments'"></span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1">
+                                <span class="text-gray-500">Interest to Principal Ratio:</span>
+                                <span class="font-semibold" x-text="getInterestRatio()"></span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1">
+                                <span class="text-gray-500">Effective Annual Rate:</span>
+                                <span class="font-semibold" x-text="getEffectiveRate()"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 space-y-2">
+                        <a href="{% url 'loans:loan_create' %}" class="block w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold text-center hover:shadow-lg transition-all">
+                            <i class="fas fa-paper-plane mr-2"></i>Apply for Loan
+                        </a>
+                        <button @click="shareCalculation()" class="block w-full border border-blue-500 text-blue-600 py-2 rounded-lg font-semibold text-center hover:bg-blue-50 transition-all">
+                            <i class="fas fa-share-alt mr-2"></i>Share Calculation
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Schedule Tabs -->
+            <div class="mt-8" x-show="dueDates.length > 0">
+                <div class="border-b dark:border-gray-700">
+                    <div class="flex space-x-4">
+                        <button @click="scheduleTab = 'table'" :class="scheduleTab === 'table' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'"
+                                class="py-2 px-1 border-b-2 font-medium text-sm transition">
+                            <i class="fas fa-table mr-2"></i>Table View
+                        </button>
+                        <button @click="scheduleTab = 'chart'" :class="scheduleTab === 'chart' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'"
+                                class="py-2 px-1 border-b-2 font-medium text-sm transition">
+                            <i class="fas fa-chart-bar mr-2"></i>Chart View
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Table View -->
+                <div x-show="scheduleTab === 'table'" class="mt-4" x-transition>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold" x-text="periodType === 'week' ? 'Week' : 'Month'"></th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold">Due Date</th>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold">Payment Amount</th>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold">Remaining Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y dark:divide-gray-700">
+                                <template x-for="(due, index) in dueDates" :key="due.period">
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                        <td class="px-4 py-2 text-sm font-medium" x-text="due.period"></td>
+                                        <td class="px-4 py-2 text-sm" x-text="due.date"></td>
+                                        <td class="px-4 py-2 text-sm text-right font-semibold text-blue-600">ZMW <span x-text="formatNumber(due.amount)"></span></td>
+                                        <td class="px-4 py-2 text-sm text-right text-gray-500">ZMW <span x-text="formatNumber(due.remaining)"></span></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot class="bg-gray-100 dark:bg-gray-700">
+                                <tr>
+                                    <td colspan="2" class="px-4 py-2 text-sm font-semibold">Total</td>
+                                    <td class="px-4 py-2 text-sm text-right font-bold text-green-600">ZMW <span x-text="formatNumber(totalPayback)"></span></td>
+                                    <td></td>
+                                </table>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Chart View -->
+                <div x-show="scheduleTab === 'chart'" class="mt-4" x-transition>
+                    <canvas id="paymentChart" height="300"></canvas>
+                </div>
+            </div>
+            
+            <!-- Share Modal -->
+            <div x-show="showShareModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-semibold mb-4">Share Calculation</h3>
+                    <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mb-4">
+                        <p class="text-sm break-all" x-text="shareText"></p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button @click="copyToClipboard()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">Copy</button>
+                        <button @click="showShareModal = false" class="flex-1 border border-gray-300 py-2 rounded-lg">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function loanCalculator() {
+    return {
+        amount: 10000,
+        rate: 10,
+        periodType: 'week',
+        duration: 12,
+        principal: 0,
+        totalInterest: 0,
+        totalPayback: 0,
+        installment: 0,
+        dueDates: [],
+        scheduleTab: 'table',
+        showShareModal: false,
+        shareText: '',
+        chart: null,
+        
+        calculate() {
+            // Local calculation for immediate response
+            this.calculateLocal();
+            
+            // Also call API for persistence (optional)
+            this.calculateViaAPI();
+        },
+        
+        calculateLocal() {
+            let principal = parseFloat(this.amount) || 0;
+            let rate = parseFloat(this.rate) || 0;
+            let duration = parseInt(this.duration) || 0;
+            
+            if (principal <= 0 || rate <= 0 || duration <= 0) {
+                return;
+            }
+            
+            let totalInterest, totalPayback, installment;
+            let periods = duration;
+            
+            if (this.periodType === 'week') {
+                totalInterest = principal * (rate / 100) * duration;
+                totalPayback = principal + totalInterest;
+                installment = totalPayback / duration;
+            } else {
+                // Monthly calculation
+                totalInterest = principal * (rate / 100) * duration;
+                totalPayback = principal + totalInterest;
+                installment = totalPayback / duration;
+                periods = duration;
+            }
+            
+            this.principal = principal;
+            this.totalInterest = totalInterest;
+            this.totalPayback = totalPayback;
+            this.installment = installment;
+            
+            // Generate due dates with remaining balance
+            this.dueDates = [];
+            let startDate = new Date();
+            let remaining = totalPayback;
+            
+            for (let i = 1; i <= periods; i++) {
+                let dueDate = new Date(startDate);
+                if (this.periodType === 'week') {
+                    dueDate.setDate(startDate.getDate() + (i * 7));
+                } else {
+                    dueDate.setMonth(startDate.getMonth() + i);
+                }
+                
+                remaining -= installment;
+                
+                this.dueDates.push({
+                    period: i,
+                    date: dueDate.toISOString().split('T')[0],
+                    amount: installment,
+                    remaining: Math.max(0, remaining)
+                });
+            }
+            
+            // Update chart after calculation
+            setTimeout(() => this.updateChart(), 100);
+        },
+        
+        calculateViaAPI() {
+            fetch('/loans/api/calculate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    amount: this.amount,
+                    interest_rate: this.rate,
+                    period_type: this.periodType,
+                    duration_weeks: this.periodType === 'week' ? this.duration : this.duration * 4
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Optionally sync with API data
+                if (data.principal) {
+                    this.principal = data.principal;
+                    this.totalInterest = data.total_interest;
+                    this.totalPayback = data.total_payback;
+                    this.installment = data.installment_amount;
+                    if (data.due_dates && data.due_dates.length > 0) {
+                        this.dueDates = data.due_dates;
+                    }
+                }
+            })
+            .catch(error => console.error('API Error:', error));
+        },
+        
+        updateChart() {
+            const ctx = document.getElementById('paymentChart');
+            if (!ctx) return;
+            
+            const amounts = this.dueDates.map(d => d.amount);
+            const periods = this.dueDates.map(d => `${this.periodType === 'week' ? 'W' : 'M'} ${d.period}`);
+            
+            if (this.chart) {
+                this.chart.destroy();
+            }
+            
+            this.chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: periods,
+                    datasets: [{
+                        label: `${this.periodType === 'week' ? 'Weekly' : 'Monthly'} Payment`,
+                        data: amounts,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'ZMW ' + context.raw.toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (ZMW)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'ZMW ' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: this.periodType === 'week' ? 'Week Number' : 'Month Number'
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        setPreset(amount, rate, duration) {
+            this.amount = amount;
+            this.rate = rate;
+            this.duration = duration;
+            this.calculate();
+        },
+        
+        getInterestRatio() {
+            if (this.principal === 0) return '0%';
+            const ratio = (this.totalInterest / this.principal * 100);
+            return ratio.toFixed(1) + '%';
+        },
+        
+        getEffectiveRate() {
+            const periodsPerYear = this.periodType === 'week' ? 52 : 12;
+            const ratePerPeriod = this.rate / 100;
+            const effectiveRate = Math.pow(1 + ratePerPeriod, periodsPerYear) - 1;
+            return (effectiveRate * 100).toFixed(2) + '%';
+        },
+        
+        shareCalculation() {
+            this.shareText = `Loan Calculation:\nAmount: ZMW ${this.formatNumber(this.amount)}\nInterest Rate: ${this.rate}%\nPeriod: ${this.periodType === 'week' ? 'Weekly' : 'Monthly'}\nDuration: ${this.duration} ${this.periodType === 'week' ? 'weeks' : 'months'}\nPayment: ZMW ${this.formatNumber(this.installment)} ${this.periodType === 'week' ? 'weekly' : 'monthly'}\nTotal Payback: ZMW ${this.formatNumber(this.totalPayback)}`;
+            this.showShareModal = true;
+        },
+        
+        copyToClipboard() {
+            navigator.clipboard.writeText(this.shareText);
+            alert('Calculation copied to clipboard!');
+            this.showShareModal = false;
+        },
+        
+        formatNumber(num) {
+            if (!num || isNaN(num)) return '0.00';
+            return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        initCalculator() {
+            this.calculate();
+        }
+    }
+}
+</script>
+
+<style>
+[x-cloak] { display: none; }
+</style>
+{% endblock %}

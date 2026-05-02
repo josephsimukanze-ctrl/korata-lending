@@ -1,0 +1,254 @@
+<!-- templates/reports/print_base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Korata Lending System</title>
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Print-specific styles */
+        @media print {
+            /* Hide non-printable elements */
+            .no-print, 
+            .print-hide,
+            .action-buttons,
+            button,
+            .btn,
+            nav,
+            .sidebar,
+            .pagination,
+            .filters {
+                display: none !important;
+            }
+            
+            /* Ensure proper page breaks */
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .page-break-after {
+                page-break-after: always;
+            }
+            
+            .avoid-break {
+                page-break-inside: avoid;
+            }
+            
+            /* Table styling for print */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }
+            
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            th {
+                background-color: #f3f4f6;
+                font-weight: bold;
+            }
+            
+            /* Header and footer for each page */
+            @page {
+                size: A4;
+                margin: 2cm;
+                @top-center {
+                    content: "{{ title }}";
+                    font-size: 12pt;
+                }
+                @bottom-center {
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-size: 10pt;
+                }
+            }
+            
+            /* Company header styling */
+            .company-header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #333;
+                padding-bottom: 10px;
+            }
+            
+            .company-header h1 {
+                font-size: 24px;
+                margin: 0;
+            }
+            
+            .company-header p {
+                margin: 5px 0;
+                font-size: 12px;
+            }
+            
+            /* Report title */
+            .report-title {
+                text-align: center;
+                margin: 20px 0;
+            }
+            
+            .report-title h2 {
+                font-size: 18px;
+                margin: 0;
+            }
+            
+            /* Summary cards for print */
+            .print-card {
+                border: 1px solid #ddd;
+                padding: 10px;
+                margin-bottom: 10px;
+                break-inside: avoid;
+            }
+            
+            /* Color printing */
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            /* Links */
+            a {
+                text-decoration: none;
+                color: black;
+            }
+        }
+        
+        /* Screen styles for print preview */
+        @media screen {
+            body {
+                background: #f3f4f6;
+                padding: 20px;
+            }
+            
+            .print-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            
+            .print-button {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 1000;
+            }
+        }
+        
+        /* General styles */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+        
+        .mb-6 {
+            margin-bottom: 24px;
+        }
+        
+        .mt-4 {
+            margin-top: 16px;
+        }
+        
+        .font-bold {
+            font-weight: bold;
+        }
+        
+        .border {
+            border: 1px solid #ddd;
+        }
+        
+        .p-4 {
+            padding: 16px;
+        }
+        
+        .grid {
+            display: grid;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .gap-4 {
+            gap: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        <!-- Company Header -->
+        <div class="company-header">
+            <h1>Korata Lending System</h1>
+            <p>Plot No. 123, Great East Road, Lusaka, Zambia</p>
+            <p>Tel: +260 123 456 789 | Email: info@korata.com</p>
+            <p>Website: www.korata.com</p>
+        </div>
+        
+        <!-- Report Title -->
+        <div class="report-title">
+            <h2>{{ title }}</h2>
+            <p>Generated on: {{ report_date|date:"F j, Y H:i:s" }}</p>
+            {% if date_range %}
+            <p>Period: {{ date_range }}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Main Content -->
+        {% block print_content %}
+        {% endblock %}
+        
+        <!-- Footer -->
+        <div class="text-center mt-4" style="font-size: 10px; border-top: 1px solid #ddd; padding-top: 10px;">
+            <p>This is a computer-generated report and does not require a signature.</p>
+            <p>&copy; {% now "Y" %} Korata Lending System. All rights reserved.</p>
+        </div>
+    </div>
+    
+    <!-- Print Button (only visible on screen) -->
+    <div class="print-button no-print">
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 flex items-center space-x-2">
+            <i class="fas fa-print"></i>
+            <span>Print Report</span>
+        </button>
+    </div>
+    
+    <script>
+        // Auto-trigger print dialog if format=print is in URL
+        if (window.location.href.indexOf('format=print') > -1) {
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        }
+        
+        // Handle after print event
+        window.onafterprint = function() {
+            // Optional: Close window if it was opened as print preview
+            if (window.location.href.indexOf('format=print') > -1 && window.history.length === 1) {
+                // window.close(); // Uncomment if you want to close after printing
+            }
+        };
+    </script>
+</body>
+</html>

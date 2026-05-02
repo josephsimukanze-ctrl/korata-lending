@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profit & Loss Report - Korata Lending{% endblock %}
+
+{% block content %}
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold">Profit & Loss Report</h2>
+                <p class="mt-1 opacity-90">Financial performance and profitability analysis</p>
+            </div>
+            <div class="hidden md:block">
+                <i class="fas fa-chart-line text-5xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Period Filter -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Period</label>
+                <select name="period" class="px-3 py-2 border rounded-lg dark:bg-gray-700">
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Apply Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- P&L Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Interest Earned</p>
+                    <p class="text-2xl font-bold text-green-600">ZMW {{ interest_earned|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percent text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Disbursed</p>
+                    <p class="text-2xl font-bold text-red-600">ZMW {{ total_disbursed|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Total Collected</p>
+                    <p class="text-2xl font-bold text-blue-600">ZMW {{ total_collected|floatformat:0 }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-credit-card text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Net Profit</p>
+                    <p class="text-2xl font-bold {% if net_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        ZMW {{ net_profit|floatformat:0 }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 {% if net_profit >= 0 %}bg-green-100 dark:bg-green-900{% else %}bg-red-100 dark:bg-red-900{% endif %} rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-line {% if net_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %} text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Monthly Breakdown Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <i class="fas fa-chart-bar mr-2 text-purple-500"></i>Monthly Financial Breakdown
+        </h3>
+        <canvas id="monthlyChart" height="300"></canvas>
+    </div>
+    
+    <!-- Monthly Data Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                <i class="fas fa-table mr-2 text-blue-500"></i>Monthly Breakdown
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Month</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Disbursed</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Collected</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Interest</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Profit</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    {% for month in monthly_data %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-6 py-4 text-sm font-medium">{{ month.month }}</td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ month.disbursed|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ month.collected|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right">ZMW {{ month.interest|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-sm text-right font-semibold {% if month.collected > month.disbursed %}text-green-600{% else %}text-red-600{% endif %}">
+                         ZMW {{ month.collected|add:month.disbursed|add:"-"|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                            No financial data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-gray-50 dark:bg-gray-700">
+                    <tr class="border-t dark:border-gray-600">
+                        <td class="px-6 py-3 text-sm font-semibold">Total</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ total_disbursed|floatformat:2 }}</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ total_collected|floatformat:2 }}</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ interest_earned|floatformat:2 }}</td>
+                        <td class="px-6 py-3 text-sm text-right font-bold">ZMW {{ net_profit|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx) {
+        const months = [{% for month in monthly_data %}'{{ month.month }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const disbursed = [{% for month in monthly_data %}{{ month.disbursed }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        const collected = [{% for month in monthly_data %}{{ month.collected }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+        
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Disbursed',
+                        data: disbursed,
+                        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                        borderColor: '#ef4444',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Collected',
+                        data: collected,
+                        backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ZMW ' + context.raw.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'ZMW ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

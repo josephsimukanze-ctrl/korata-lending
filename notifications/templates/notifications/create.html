@@ -1,0 +1,159 @@
+<!-- templates/notifications/create.html -->
+{% extends 'base.html' %}
+
+{% block title %}Create Notification - Korata{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="mb-6">
+        <a href="{% url 'notifications:list' %}" class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Notifications
+        </a>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white">Create Notification</h1>
+            <p class="text-blue-100 mt-1">Send alerts to users via email, SMS, and push notifications</p>
+        </div>
+        
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            <!-- Basic Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title *</label>
+                    <input type="text" name="title" required class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notification Type</label>
+                    <select name="notification_type" class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700">
+                        <option value="info">Information</option>
+                        <option value="payment">Payment</option>
+                        <option value="loan">Loan</option>
+                        <option value="reminder">Reminder</option>
+                        <option value="alert">Alert</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message *</label>
+                <textarea name="message" rows="5" required class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
+                    <select name="priority" class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link (Optional)</label>
+                    <input type="url" name="link" class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700" placeholder="https://...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expiry (Days)</label>
+                    <input type="number" name="expiry_days" class="w-full border rounded-lg px-4 py-2 dark:bg-gray-700" placeholder="30">
+                </div>
+            </div>
+            
+            <!-- Delivery Channels -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-semibold mb-3">Delivery Channels</h3>
+                <div class="flex space-x-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_push" checked class="rounded border-gray-300 text-blue-600">
+                        <span class="ml-2">Push Notification</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_email" class="rounded border-gray-300 text-blue-600">
+                        <span class="ml-2">Email</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="send_sms" class="rounded border-gray-300 text-blue-600">
+                        <span class="ml-2">SMS</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Recipients -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-semibold mb-3">Recipients</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center">
+                        <input type="radio" name="recipient_type" value="all" checked class="rounded-full border-gray-300 text-blue-600">
+                        <span class="ml-2">All Users</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="radio" name="recipient_type" value="role" class="rounded-full border-gray-300 text-blue-600">
+                        <span class="ml-2">Specific Role</span>
+                    </label>
+                    <div class="ml-6">
+                        <select name="role" class="border rounded-lg px-4 py-2 dark:bg-gray-700" disabled>
+                            <option value="">Select Role</option>
+                            <option value="ceo">CEO</option>
+                            <option value="admin">Admin</option>
+                            <option value="loan_officer">Loan Officer</option>
+                            <option value="collateral_officer">Collateral Officer</option>
+                            <option value="accountant">Accountant</option>
+                        </select>
+                    </div>
+                    
+                    <label class="flex items-center">
+                        <input type="radio" name="recipient_type" value="single" class="rounded-full border-gray-300 text-blue-600">
+                        <span class="ml-2">Specific User</span>
+                    </label>
+                    <div class="ml-6">
+                        <select name="recipient_id" class="border rounded-lg px-4 py-2 dark:bg-gray-700" disabled>
+                            <option value="">Select User</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }} - {{ user.get_role_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Schedule -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-semibold mb-3">Schedule (Optional)</h3>
+                <input type="datetime-local" name="schedule_date" class="border rounded-lg px-4 py-2 dark:bg-gray-700">
+                <p class="text-sm text-gray-500 mt-1">Leave empty to send immediately</p>
+            </div>
+            
+            <div class="flex gap-4 pt-4">
+                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition">
+                    <i class="fas fa-paper-plane mr-2"></i> Send Notification
+                </button>
+                <a href="{% url 'notifications:list' %}" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 text-center py-2 rounded-lg transition">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Enable/disable role/user selects based on radio selection
+document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const roleSelect = document.querySelector('select[name="role"]');
+        const userSelect = document.querySelector('select[name="recipient_id"]');
+        
+        roleSelect.disabled = this.value !== 'role';
+        userSelect.disabled = this.value !== 'single';
+    });
+});
+</script>
+{% endblock %}
