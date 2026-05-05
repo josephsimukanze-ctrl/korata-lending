@@ -7,7 +7,10 @@ import os
 import dj_database_url
 from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
+from django.utils.timezone import now
+import pytz
 
+# or your local timezone like 'Africa/Nairobi'
 # Load environment variables
 load_dotenv()
 
@@ -63,14 +66,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic',  # For static files in production
     'django.contrib.staticfiles',
-    'corsheaders',  # For CORS support
     
-    # Third-party apps
+    # Third-party apps (only essential ones)
     'crispy_forms',
     'crispy_tailwind',
-    'django_q',  # For background tasks
     
     # Local apps
     'users',
@@ -110,29 +110,32 @@ MIDDLEWARE = [
 # ==================== DATABASE CONFIGURATION ====================
 # PostgreSQL for production, SQLite for development
 
-if DEBUG:
-    # Development - SQLite
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-            'OPTIONS': {
-                'timeout': 20,
-            },
-        }
-    }
-else:
-    # Production - PostgreSQL (Render)
-    DATABASE_URL = os.getenv('DATABASE_URL')
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is required for production")
-    
+
+# korata_lending/settings.py - Simplified database config
+
+import dj_database_url
+import os
+
+# Database configuration
+if os.getenv('DATABASE_URL'):
+    # Production on Render
     DATABASES = {
         'default': dj_database_url.config(
-            default=DATABASE_URL,
             conn_max_age=600,
             ssl_require=True
         )
+    }
+else:
+    # Local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'korata_lending',
+            'USER': 'korata_user',
+            'PASSWORD': 'korata123',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
 
 # ==================== TIMEZONE HANDLING ====================
@@ -492,3 +495,8 @@ SMS_SENDER_ID = os.getenv('SMS_SENDER_ID', 'Korata')
 # Rate limiting for SMS
 SMS_RATE_LIMIT_PER_MINUTE = 10
 SMS_RATE_LIMIT_PER_DAY = 100
+
+
+# Timezone settings
+USE_TZ = True
+TIME_ZONE = 'UTC'  

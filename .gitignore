@@ -53,3 +53,7 @@ htmlcov/
 
 # Secret files
 SECRET_KEY.txt
+*.sqlite3
+*.db
+backups/*.json
+backups/*.zip
