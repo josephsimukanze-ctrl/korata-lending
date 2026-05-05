@@ -1,5 +1,3 @@
-# render.yaml - Minimal version
-
 services:
   - type: web
     name: korata-lending
@@ -17,13 +15,37 @@ services:
       - key: DEBUG
         value: false
       - key: ALLOWED_HOSTS
-        value: .onrender.com
+        value: .onrender.com,localhost,127.0.0.1
       - key: CSRF_TRUSTED_ORIGINS
         value: https://*.onrender.com
+      - key: DJANGO_SETTINGS_MODULE
+        value: korata_lending.settings
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: DATABASE_URL
         fromDatabase:
           name: korata-db
           property: connectionString
+      - key: DB_ENGINE
+        value: django.db.backends.postgresql
+      - key: DB_NAME
+        fromDatabase:
+          name: korata-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: korata-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: korata-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: korata-db
+          property: host
+      - key: DB_PORT
+        value: 5432
 
   - type: cron
     name: korata-cron-daily
@@ -36,6 +58,22 @@ services:
         fromDatabase:
           name: korata-db
           property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: korata_lending.settings
+
+  - type: cron
+    name: korata-cron-hourly
+    runtime: python
+    schedule: "0 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py check_collateral_status
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: korata-db
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: korata_lending.settings
 
 databases:
   - name: korata-db

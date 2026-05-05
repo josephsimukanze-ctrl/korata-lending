@@ -7,10 +7,7 @@ import os
 import dj_database_url
 from django.contrib.messages import constants as messages
 from dotenv import load_dotenv
-from django.utils.timezone import now
-import pytz
 
-# or your local timezone like 'Africa/Nairobi'
 # Load environment variables
 load_dotenv()
 
@@ -43,8 +40,10 @@ else:
     # Production - must be set via environment variable
     raw_hosts = os.getenv('ALLOWED_HOSTS')
     if not raw_hosts:
-        raise ValueError("ALLOWED_HOSTS environment variable must be set in production")
-    ALLOWED_HOSTS = [host.strip() for host in raw_hosts.split(',') if host.strip()]
+        # Default for Render
+        ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
+    else:
+        ALLOWED_HOSTS = [host.strip() for host in raw_hosts.split(',') if host.strip()]
 
 # 🔐 CSRF Trusted Origins
 if DEBUG:
@@ -57,7 +56,12 @@ if DEBUG:
         'http://*.ngrok.io',
     ]
 else:
-    CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+    # Production for Render
+    csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+    if csrf_origins:
+        CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+    else:
+        CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
 
 # 🔹 Application definition
 INSTALLED_APPS = [
@@ -67,10 +71,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Add this for templates
     
-    # Third-party apps (only essential ones)
+    # Third-party apps
     'crispy_forms',
     'crispy_tailwind',
+    'corsheaders',
+    'rest_framework',
     
     # Local apps
     'users',
@@ -101,20 +108,22 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'core.middleware.SessionIdleTimeoutMiddleware',
-    'core.middleware.ActivityTrackingMiddleware',
-    'core.middleware.SecurityHeadersMiddleware',
-    'users.middleware.UserPreferencesMiddleware',
 ]
+
+# Only add custom middleware if they exist
+try:
+    import core.middleware
+    MIDDLEWARE.extend([
+        'core.middleware.SessionIdleTimeoutMiddleware',
+        'core.middleware.ActivityTrackingMiddleware',
+        'core.middleware.SecurityHeadersMiddleware',
+        'users.middleware.UserPreferencesMiddleware',
+    ])
+except ImportError:
+    pass  # Custom middleware not available
 
 # ==================== DATABASE CONFIGURATION ====================
 # PostgreSQL for production, SQLite for development
-
-
-# korata_lending/settings.py - Simplified database config
-
-import dj_database_url
-import os
 
 # Database configuration
 if os.getenv('DATABASE_URL'):
@@ -122,25 +131,25 @@ if os.getenv('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(
             conn_max_age=600,
-            ssl_require=True
+            ssl_require=not DEBUG  # Require SSL in production
         )
     }
 else:
-    # Local development
+    # Local development with PostgreSQL
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'korata_lending',
-            'USER': 'korata_user',
-            'PASSWORD': 'korata123',
-            'HOST': 'localhost',
-            'PORT': '5432',
+            'NAME': os.getenv('DB_NAME', 'korata_lending'),
+            'USER': os.getenv('DB_USER', 'korata_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'korata123'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 
 # ==================== TIMEZONE HANDLING ====================
-USE_TZ = not DEBUG  # Use timezone in production, naive in development for SQLite
-TIME_ZONE = 'Africa/Lusaka'
+USE_TZ = True  # Always use timezone-aware datetimes
+TIME_ZONE = 'Africa/Lusaka'  # or 'Africa/Nairobi', 'UTC'
 USE_I18N = True
 LANGUAGE_CODE = 'en-us'
 
@@ -205,14 +214,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# 🔐 Rate Limiting Settings
-RATELIMIT_ENABLE = not DEBUG
-RATELIMIT_USE_CACHE = 'default'
-RATELIMIT_VIEW = 'core.views.rate_limit_exceeded'
-
 # 📦 Static files
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -237,8 +241,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # 📧 Email (secure)
-# ==================== EMAIL SETTINGS ====================
-# Email configuration (optional for development)
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
@@ -250,11 +252,9 @@ else:
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
     EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 30))
 
-# Default from email
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Korata Lending <noreply@korata.com>')
-
-# Site URL
 SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000' if DEBUG else 'https://yourdomain.com')
+
 # 🎨 Messages
 MESSAGE_TAGS = {
     messages.DEBUG: 'debug',
@@ -264,11 +264,7 @@ MESSAGE_TAGS = {
     messages.ERROR: 'error',
 }
 
-# 🔐 Security Logging
-SECURITY_LOG_FILE = BASE_DIR / 'logs' / 'security.log'
-SECURITY_LOG_FILE.parent.mkdir(exist_ok=True)
-
-# 🪵 Logging with security focus
+# 🪵 Logging
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
@@ -328,20 +324,10 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
-        'django.security': {
-            'handlers': ['security_file', 'mail_admins'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'security': {
-            'handlers': ['security_file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
     },
 }
 
-# ⚡ Cache with security
+# ⚡ Cache
 if not DEBUG and os.getenv('REDIS_URL'):
     CACHES = {
         'default': {
@@ -357,27 +343,7 @@ else:
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'unique-snowflake',
-            'OPTIONS': {
-                'MAX_ENTRIES': 1000,
-                'CULL_FREQUENCY': 3,
-            }
         }
-    }
-
-# ⚙️ Django Q settings for background tasks
-if not DEBUG:
-    Q_CLUSTER = {
-        'name': 'korata',
-        'workers': 2,
-        'recycle': 500,
-        'timeout': 60,
-        'compress': True,
-        'save_limit': 250,
-        'queue_limit': 500,
-        'cpu_affinity': 1,
-        'label': 'Django Q',
-        'redis': os.getenv('REDIS_URL', 'redis://localhost:6379'),
-        'sync': False,
     }
 
 # 📤 Upload security
@@ -385,38 +351,17 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 DATA_UPLOAD_MAX_NUMBER_FILES = 100
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 
-# 🔐 File Upload Security
-FILE_UPLOAD_HANDLERS = [
-    'django.core.files.uploadhandler.MemoryFileUploadHandler',
-    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
-]
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
-FILE_UPLOAD_PERMISSIONS = 0o644
-
-# 🔐 Allowed file extensions
-ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx']
-
-# ⚙️ Custom Settings
-MAX_LOGIN_ATTEMPTS = 5
-LOGIN_ATTEMPT_TIMEOUT = 300  # 5 minutes
-DEFAULT_LOAN_INTEREST_RATE = 10
-DEFAULT_LOAN_DURATION_WEEKS = 12
-AUCTION_DEFAULT_DAYS = 7
-
 # 🖨️ PDF Settings
-PDF_STATIC_URL = STATIC_URL
-PDF_STATIC_ROOT = STATIC_ROOT
-PDF_MEDIA_URL = MEDIA_URL
-PDF_MEDIA_ROOT = MEDIA_ROOT
-
-# Enable temporary files for PDF generation
 XHTML2PDF_TEMP = BASE_DIR / 'tmp'
 XHTML2PDF_TEMP.mkdir(exist_ok=True)
 
-# 🔐 Silk profiling (only in development, disable in production)
+# 🔐 Silk profiling (only in development)
 if DEBUG:
-    INSTALLED_APPS.append('silk')
-    MIDDLEWARE.insert(1, 'silk.middleware.SilkyMiddleware')
+    try:
+        INSTALLED_APPS.append('silk')
+        MIDDLEWARE.insert(1, 'silk.middleware.SilkyMiddleware')
+    except ImportError:
+        pass
 
 # Application definition
 ROOT_URLCONF = 'korata_lending.urls'
@@ -433,7 +378,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.session_timeout',
             ],
             'builtins': [
                 'django.templatetags.static',
@@ -445,10 +389,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'korata_lending.wsgi.application'
 
 # ==================== PRODUCTION VALIDATION ====================
-
 if not DEBUG:
     # Validate required environment variables
-    required_vars = ['DJANGO_SECRET_KEY', 'ALLOWED_HOSTS', 'DATABASE_URL']
+    required_vars = ['DJANGO_SECRET_KEY', 'DATABASE_URL']
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
@@ -457,46 +400,15 @@ if not DEBUG:
     # Ensure HTTPS in production
     if not SECURE_SSL_REDIRECT:
         raise ValueError("SECURE_SSL_REDIRECT must be True in production")
-    
-    if not SESSION_COOKIE_SECURE:
-        raise ValueError("SESSION_COOKIE_SECURE must be True in production")
-    
-    if not CSRF_COOKIE_SECURE:
-        raise ValueError("CSRF_COOKIE_SECURE must be True in production")
-
-# ==================== CRON JOBS ====================
-CRONJOBS = [
-    ('0 0 * * *', 'django.core.management.call_command', ['process_late_payments']),
-    ('9 0 * * *', 'django.core.management.call_command', ['send_overdue_reminders']),
-]
 
 # ==================== AI CONFIGURATIONS ====================
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'tinyllama')
 
 # ==================== SMS PROVIDER CONFIGURATIONS ====================
-# Africa's Talking (Primary - Best for Africa)
 AFRICASTALKING_USERNAME = os.getenv('AFRICASTALKING_USERNAME', '')
 AFRICASTALKING_API_KEY = os.getenv('AFRICASTALKING_API_KEY', '')
-SMS_SHORTCODE = os.getenv('SMS_SHORTCODE', '12345')
-
-# MessageBird (Secondary)
-MESSAGEBIRD_API_KEY = os.getenv('MESSAGEBIRD_API_KEY', '')
-
-# Twilio (Tertiary - Backup)
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
 TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
-
-# Sender ID (appears as sender name on phone)
 SMS_SENDER_ID = os.getenv('SMS_SENDER_ID', 'Korata')
-
-# Rate limiting for SMS
-SMS_RATE_LIMIT_PER_MINUTE = 10
-SMS_RATE_LIMIT_PER_DAY = 100
-
-
-# Timezone settings
-USE_TZ = True
-TIME_ZONE = 'UTC'  
