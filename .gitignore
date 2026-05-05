@@ -19,9 +19,12 @@ build/
 *.pot
 *.pyc
 *.pyo
+*.sqlite3
+*.db
 db.sqlite3
 db.sqlite3-journal
 /media/
+/mediafiles/
 /staticfiles/
 /static/
 .DS_Store
@@ -41,19 +44,78 @@ htmlcov/
 .idea/
 *.swp
 *.swo
+*.sublime-*
+.cursor/
+.vscode/
 
-# Backups
-/backups/*.json
-/backups/*.zip
-/backups/*.sql
+# Backups (all backup files and folders)
+/backups/
+backups/
+*.backup
+*.bak
+*.sql
+*.dump
+*.json
+*.gz
+*.zip
+*.tar
+*.tar.gz
+backups/*.json
+backups/*.sql
+backups/*.zip
+backups/*.gz
 
-# Logs
-/logs/*.log
+# Logs (all log files)
+/logs/
+logs/
 *.log
+*.logs
+
+# Database files (additional)
+*.sqlite3
+*.db
+*.sqlite
+*.sqlitedb
 
 # Secret files
 SECRET_KEY.txt
-*.sqlite3
-*.db
-backups/*.json
-backups/*.zip
+secrets.json
+secrets.yaml
+*.secret
+
+# Uploaded files
+/uploads/
+media/
+files/
+user_uploads/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+desktop.ini
+.directory
+
+# Git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Node (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Testing
+.pytest_cache/
+.tox/
+.mypy_cache/
+.ruff_cache/
